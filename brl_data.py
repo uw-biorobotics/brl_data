@@ -1,11 +1,13 @@
 # Class skeletons for ICARUS project
 #
 ## ICARUS = Internet Characterization for Robotics Surgery
+
+#   reference:   https://docs.google.com/document/d/1vdLvEAG2EOO_GQrVbXmGArcY1ufwau3ExKEuPfJ0TFE/edit?usp=sharing
 #
 
 ####  Imports
 import datetime as dt
-from dateutil import parser
+#from dateutil import parser
 import uuid
 import inspect
 import sys, os, subprocess, ast
@@ -88,10 +90,10 @@ def brl_error(msg,fatal=True):
         # try to access the caller's "self"
         try:
             self_obj = frame.f_locals['self']
+            # get the class of the "self" and return its name
+            err_class = type(self_obj).__name__
         except KeyError:
-            pass
-        # get the class of the "self" and return its name
-        err_class = type(self_obj).__name__
+            err_class = 'unknown'
     finally:
         # make sure to clean up the frame at the end to avoid ref cycles
         del frame
@@ -103,8 +105,13 @@ def brl_error(msg,fatal=True):
 
 class validinputs:
     def __init__(self):
-        self.validtesttypes = ['single', 'longterm']  # examples only
+        self.validtesttypes = ['simulation','experiment','single', 'longterm']  # examples only
         self.validfiletypes = ['.csv', '.json']       # others?  or standardize on csv??
+        validPfTypes = ['production','communication']
+        self.production_keywords= ['homegitFolder', 'debugOutput', 'homedataFolder','dataFolder','weekdays','ops_per_day', 'duration_mean','duration_sd','start_hour','end_hour','end_date','ename','homeFolder','githomeFolder','datahomeFolder']  # production keywords
+        self.communication_keywords = ['identity','server','command_nbytes','feedback_nbytes']  # coms. keywords
+        self.testkeywords = ['floattestp','inttestp']
+        self.knownKeywords = self.production_keywords + self.communication_keywords+self.testkeywords
 ###
 #
 #  metadata: Dictionary and file I/O
@@ -118,11 +125,13 @@ class metadata:
         self.d['Dependencies'] = str([ sys.argv[0],'brl_data.py' ])
      
     # write out metadata (OVERWRITE old metadata)
-    def save(self):
+    def save(self,folder):
         if len(self.data_file_name) == 0:
             brl_error(" no data file name has been specified.")
-        print('saving metada as '+self.data_file_name)
-        fdmd = open(self.data_file_name,'w')
+        # derive metadata file name from datafile name
+        mdfn = self.data_file_name.split('.')[0] + '.meta'
+        print('saving metada as '+mdfn)
+        fdmd = open(mdfn,'w')
         for k in self.d.keys(): 
             print('{0:20} "{1:}"'.format(k, str(self.d[k])),file=fdmd)
         fdmd.close()
@@ -130,25 +139,32 @@ class metadata:
     # this reads in the metadata from a file (which might include comments)
     #  Note that dictionary will still contain string values.  e.g. Lists must
     #  be parsed, ints must be cast etc.
-        
+    #
+    #  sometimes the metadata file might be missing but we want to be robust to that
     def read(self):
+        mfn = self.data_file_name.split('.')[0] + '.meta'
+        fdmd = False
         try:
-            fdmd = open(self.data_file_name,'r')
+            fdmd = open(mfn,'r')
         except:
-            brl_error("Can't open metadata file: [{:}]".format(self.data_file_name))
-        print('reading metada from '+self.data_file_name)
-        for line in fdmd:
-            if '#' in line:
-                l1, l2 = line.split('#')
-            else:
-                l1 = line
-            l1 = l1.strip()
-            if len(l1)>0:
-                w1, w2 = l1.split(' ',1)  # white space split
-                w1 = w1.strip()
-                w2 = w2.strip()
-                self.d[w1] = w2.replace('"','')
-        fdmd.close()
+            brl_error("Can't open metadata file: [{:}]".format(mfn),fatal=False)
+        if fdmd:
+            #print('reading metadata from '+mfn)
+            for line in fdmd:
+                if '#' in line:
+                    l1, l2 = line.split('#')
+                else:
+                    l1 = line
+                l1 = l1.strip()
+                if len(l1)>0:
+                    w1, w2 = l1.split(' ',1)  # white space split
+                    w1 = w1.strip()
+                    w2 = w2.strip()
+                    self.d[w1] = w2.replace('"','')
+            fdmd.close()
+            return True
+        else:
+            return False
         
     def get_user_basics(self): 
         vis = validinputs()
@@ -174,13 +190,14 @@ class metadata:
         
 
     def __repr__(self):
-        str = '----------------------------------------------\n'
-        str += '{:25}{:}\n'.format('Assoc. Data File Name: ',self.data_file_name) 
-        str += '{:25}{:}\n'.format('Metadata Dictionary:','')
+        str = '----------------------------------------------\n' 
+        str += '{:25}{:}\n'.format('Experiment Metadata: ','') 
+        str += '{:25}{:}\n'.format('Dictionary:','')
         for k in self.d.keys():
-            str += '       {:25}{:}\n'.format(k,self.d[k]) 
+            str += '       {:25}{:} [{:}]\n'.format(k,self.d[k],type(self.d[k])) 
         str += '----------------------------------------------\n'
         return str
+     
 #
 #          Data
 #
@@ -190,33 +207,73 @@ class metadata:
 #  creation and I/O for numerical datafiles
 #   TODO: create a class for image files and a class for video files
 
+#  descrip_str     A descriptive string for the dataset
+#  inv_init        Investigator's initials
+#  testtype        "type" of test generating the data (see validinputs class)
+
 class datafile:
-    def __init__(self, descrip_str, inv_init, testtype, filetype):
+    def __init__(self, descrip_str, inv_init, testtype):
         self.descrip = descrip_str
         self.initials = inv_init
-        self.ttype = testtype  # see valid types above
-        self.ftype = filetype  # '.csv' etc.
+        self.ttype = testtype  # defined in "validinputs" class
+        self.ftype = '.csv'  # only .csv at this point
         self.fd = None  # file descriptor
-        self.name = ''  # can override this any time 
-        self.gen_name()  # generate output filename
+        self.name = ''    # can override this any time
+        self.folder = ''  # can direct datafiles into a folder
+        self.gitrepofolder = ''   # place where current code lives
         self.output_class = None  # for example:  csv.writer()
-        #self.metadata = {}   # all values must be STRINGS!
         self.metadata = metadata()
-        self.metadata.d['GitLatestCommit'] = get_latest_commit()
-        self.metadata.data_file_name = self.name
         self.metadata.d['Ncols'] = 0 # correct length of data vector
         self.metadata.d['Nrows'] = 0 # number of rows of data written so far.
         self.dataN = 0
+        self.setFoldersFlag = False
+        
+    # set correct folders for this datafile
+    #   datafolder     where to put the datafile
+    #   gitfolder      where is your current source code
+    #
+    #   folder is an absolute or relative pathname which 
+    #     will be pre-pended to the filename 
+    def set_folders(self, datafolder, gitfolder):
+        self.setFoldersFlag = True
+        self.set_data_folder(datafolder)
+        self.gitrepofolder = gitfolder
+        # these can only be done after folders are set
+        self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
+        self.gen_name()  # generate output filename
+        self.metadata.data_file_name = self.name
+
+
+    def set_data_folder(self,folname):
+        if self.fd:
+            brl_error('Its too late to change folder to'+folname+'. datafile already open')
+        if '.' in folname: 
+            brl_error('You cannot use . in folder name: ' + folname)
+        self.folder=folname
+        
+    def gen_name(self):
+        todaydate = dt.datetime.now().strftime('%Y-%m-%d')
+        #https://pynative.com/python-uuid-module-to-generate-universally-unique-identifiers/
+        #sm_uuid = str(uuid.uuid4())[0:7]  # just 8 chars should be enough
+        sm_uuid = brl_id(8)
+        self.name = '{:}_{:}_{:}_{:}_{:}{:}'.format(todaydate,sm_uuid, self.descrip,self.initials,self.ttype,self.ftype)
+        self.add_folder_to_fname()
+        if type(self.name) != type('a string'):
+            brl_error('problem generating filename')
+        if '.' in self.name.replace(self.ftype,''):
+            brl_error(' You cannot have a period (.) in base filename: '+ self.name.replace(self.ftype,''))
+        print('Generated filename: '+self.name)
+        
         
     def set_metadata(self,names, types, notes):
         N = len(names)
         if len(types) != N or len(notes) != N:
-            brl_error('uneven metadata')
+            brl_error('uneven metadata. do you need to make metadata into lists?')
         self.metadata.d['Ncols'] = str(N)     # str type for everything!
         self.metadata.d['Names'] = str(names)
         self.metadata.d['Types'] = str(types)
         self.metadata.d['Notes'] = str(notes)
-        self.metadata.d['GitLatestCommit'] = get_latest_commit()
+        self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
     
     def read_oldmetadata(self,tname=None):
         md = metadata()
@@ -229,7 +286,7 @@ class datafile:
         return md
     
     def write_metadata(self):
-        self.metadata.save() 
+        self.metadata.save(self.folder)  # save into same folder as data
         
     def validate(self): 
         vis = validinputs()
@@ -239,9 +296,6 @@ class datafile:
             valid = False
         if not self.ttype in vis.validtesttypes:
             brl_error('test type {:} is unknown in {:}'.format(self.ttype,vis.validtesttypes),fatal=False)
-            valid = False
-        if not self.ftype in vis.validfiletypes:
-            brl_error('filename extension{:} is not supported'.format(self.ftype),fatal=False)
             valid = False
         if type(self.
                 descrip) is not type('a string') or self.descrip == '':
@@ -253,23 +307,22 @@ class datafile:
         return valid
             
     def request_user_data(self):
-        self.metadata.get_user_basics() 
+        self.metadata.get_user_basics()
         
-    def gen_name(self):
-        todaydate = dt.datetime.now().strftime('%Y-%m-%d')
-        #https://pynative.com/python-uuid-module-to-generate-universally-unique-identifiers/
-        #sm_uuid = str(uuid.uuid4())[0:7]  # just 8 chars should be enough
-        sm_uuid = brl_id(8)
-        self.name = '{:}_{:}_{:}_{:}_{:}{:}'.format(todaydate,sm_uuid, self.descrip,self.initials,self.ttype,self.ftype)
-        if type(self.name) != type('a string'):
-            brl_error('problem generating filename')
-        print('Generated filename: '+self.name)
+    def add_folder_to_fname(self): # if folder=='' does nothing
+        if len(self.folder) > 0:
+            if self.folder[-1] != '/':
+                self.folder = self.folder+'/'
+            self.name = self.folder + self.name
+            
 
     # if you want to open a specific existing file,f
-    #   just set self.name = ** your filename **
+    #   just set MyDatafile.name = "** your filename **"
     #   before calling open. or use tname= parameter
     def open(self,mode='w',tname='none_flag'):
         vis = validinputs()
+        if not self.setFoldersFlag:
+            brl_error('tried to open a datafile without calling set_folders() first.')
         if tname != 'none_flag':
             if mode == 'w' and os.path.exists(tname):
                 brl_error('Attempting to overwrite an existing file ('+tname+') dont you want to append?)')
@@ -295,7 +348,6 @@ class datafile:
             commit_data = self.check_code_version()
             # if there is a new commit, add in its info
             if commit_data != '':
-                print('Test cat: ', self.metadata.d['GitLatestCommit'], commit_data)
                 self.metadata.d['GitLatestCommit'] = self.metadata.d['GitLatestCommit'] + r' || ' + commit_data
                 
             if os.path.exists(self.name):
@@ -333,7 +385,7 @@ class datafile:
         if self.fd == None:
             brl_error('Trying to close a datafile that has not been opened yet')
         else:
-            self.fd.close()
+            self.fd.close()   # close the file descriptor
             # now output the metadata
             self.metadata.d['CloseTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
             #
@@ -370,10 +422,12 @@ class datafile:
         ##
         #  Check if source code is modified and optionally automatically commit it
         #
-        #   TODO:  check ALL relevant source files, not just "calling_prog"
         #
         try: # may fail if no modified files, not a git repo etc. 
-            modified = subprocess.check_output('git status | grep modified:',shell=True).decode('UTF-8').strip().replace('\n',' | ') 
+            if self.gitrepofolder == '':
+                modified = subprocess.check_output('git status | grep modified:',shell=True).decode('UTF-8').strip().replace('\n',' | ') 
+            else:
+                modified = subprocess.check_output('git status | grep modified:',cwd=self.gitrepofolder,shell=True).decode('UTF-8').strip().replace('\n',' | ') 
         except:
             print('Code is unmodified')
             modified = ''
@@ -398,17 +452,17 @@ class datafile:
                     GIT_FAIL = False
                     try:
                         # make git add and commit the new source code.
-                        a = subprocess.check_output(['git','add',dep])
+                        a = subprocess.check_output(['git','add',dep],cwd=self.gitrepofolder)
                     except:
                         print('Fail 1')
                         GIT_FAIL = True
                     try: # do the commit
-                        b = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"])                    
+                        b = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd=self.gitrepofolder)                    
                     except:
                         print('Fail 2')
                         GIT_FAIL = True
                     try:
-                        new_commit_info = get_latest_commit()
+                        new_commit_info = get_latest_commit(folder=self.gitrepofolder)
                     except:
                         print('Fail 3')
                         GIT_FAIL = True
@@ -416,42 +470,40 @@ class datafile:
                         brl_error('Something went wrong with git commands!')
                                         
                     brl_error('Notice: Source code was changed: auto commit has been done, metadata updated.',fatal=False)
-        info = get_latest_commit()
+        info = get_latest_commit(folder=self.gitrepofolder)
         return info
             
             
-def get_latest_commit():
-    tmp = subprocess.check_output('git log',shell=True).decode('UTF-8').split('\n')
+def get_latest_commit(folder='no folder'):
+    if folder=='no folder':
+        brl_error('get_latest_commit should be called with an explict folder\nUse empty string ("") for same folder as your running code')
+        tmp = subprocess.check_output('git log', shell=True).decode('UTF-8').split('\n')
+    else:
+    #    brl_error('checking git in folder: '+folder,fatal=False)
+        if folder == '':
+            tmp = subprocess.check_output('git log', shell=True).decode('UTF-8').split('\n')
+        else:
+            tmp = subprocess.check_output('git log',cwd=folder, shell=True).decode('UTF-8').split('\n')
+
     return str('Git: '+tmp[0]+' '+tmp[4].strip())
     
 ###########################################  Configurations
 #############   Parameter Files  
 #
 #  Store setups for experiments
+#    pfname   str   parameter file name
+#
 #
 
 class param_file:
-    def __init__(self,pfname,pftype):
-        validPfTypes = ['production','communication']
-        self.production_keywords= ['weekdays','ops_per_day', 'duration_mean','duration_sd','start_hour','end_hour','end_date','ename']  # production keywords
-        self.communication_keywords = ['command_nbytes','feedback_nbytes']  # coms. keywords
-        self.name = ''
-        if pftype in validPfTypes:
-            self.pftype = pftype
-        else:
-            brl_error('Invalid parameter file-type specified')
-        if self.pftype == 'production':
-            ##  Exact keywords to be determined, augmented
-            self.validKeywords = self.production_keywords
-            self.name = pfname+'.prod'
-        if self.pftype == 'communication':
-            ##  Exact keywords to be determined, augmented
-            self.validKeywords = self.communication_keywords
-            self.name = pfname+'.comms'
+    def __init__(self,pfname):
+        vfs = validinputs() 
+        self.name = pfname 
         self.params = {}    # values read from or written to param file
         
     
-    def read(self):
+    def read(self): 
+        vfs = validinputs()
         try:
             fp = open(self.name, 'r')
         except:
@@ -461,19 +513,22 @@ class param_file:
                 l2 = line.split('#')  # clear comments
             else:
                 l2 = [line]
-            if len(l2[0].strip()) == 0:
+            if len(l2[0].strip()) == 0:  # there's no keyword here
                 continue
             else:
-                kw,val = l2[0].split()    # get kw/value pairs
-                if kw in self.validKeywords:
-                    self.params[kw] = val
-                else:
-                    brl_error('unknown keyword: '+kw,fatal=False)
+                line = line.strip()
+                if line != '':
+                    kw,val = l2[0].split(None,1)    # get kw/value pairs
+                    kw = kw.strip()
+                    val = val.strip()
+                    if kw in vfs.knownKeywords:
+                        self.params[kw] = val
+                    else:
+                        brl_error('unknown keyword: '+kw,fatal=True)
     
     def __repr__(self):
         str = '----------------------------------------------\n'
-        str += '{:25}{:}\n'.format('Parameter File: ',self.name) 
-        str += '{:25}{:}\n'.format('Type',self.pftype)
+        str += '{:25}{:}\n'.format('Parameter File: ',self.name)
         str += '{:25}{:}\n'.format('Dictionary:','')
         for k in self.params.keys():
             str += '       {:25}{:}\n'.format(k,self.params[k]) 
