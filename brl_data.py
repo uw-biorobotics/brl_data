@@ -183,10 +183,13 @@ class metadata:
         n2 = n2[0]
         
         smart_query(self.d,'Initials', msg='Your Initials',example=n1+n2)
-        smart_query(self.d,'OpenTime', msg='Creation Date:', example= '07-March-2017')
-     
-        smart_query(self.d,'FileType', example='.csv or .json',valids=vis.validfiletypes)
-        smart_query(self.d,'TestType', example='single or longterm',valids=vis.validtesttypes)
+        thedate = str(dt.date.today())
+        smart_query(self.d,'OpenTime', msg='Creation Date:', example=thedate)
+        vinp = validinputs()
+        vf = vinp.validfiletypes
+        vt = vinp.validtesttypes
+        smart_query(self.d,'FileType', example=vf,valids=vis.validfiletypes)
+        smart_query(self.d,'TestType', example=vt,valids=vis.validtesttypes)
         
 
     def __repr__(self):
@@ -435,14 +438,15 @@ class datafile:
             if dep in modified:
                 DO_AUTOCOMM = False
                 if BRL_auto_git_commit == ASK:
-                    com_resp = input('       Code for {:} was modified: auto git commit?? (Y/n/?):'.format(dep))
+                    com_resp = input('       Code for {:} was modified: auto git commit?? (y/N/?):'.format(dep))
+                    com_resp = com_resp.lower()
                     if com_resp == '':
-                        DO_AUTOCOMM = True
+                        DO_AUTOCOMM = False
                     if com_resp == '?':
                         print('''\nDo you want to automatically generate a git add/commit to reflect 
-                            current state of this code? (Y/n).   Quitting and starting over...\n\n''')
+                            current state of this code? (y/N).   Quitting, please start over...\n\n''')
                         quit()
-                    if com_resp.lower() != 'n':
+                    if com_resp == 'y':
                         DO_AUTOCOMM = True
                 if BRL_auto_git_commit == ALWAYS:
                     DO_AUTOCOMM = True
@@ -461,11 +465,12 @@ class datafile:
                     except:
                         print('Fail 2')
                         GIT_FAIL = True
-                    try:
-                        new_commit_info = get_latest_commit(folder=self.gitrepofolder)
-                    except:
-                        print('Fail 3')
-                        GIT_FAIL = True
+                    if not GIT_FAIL:
+                        try:
+                            new_commit_info = get_latest_commit(folder=self.gitrepofolder)
+                        except:
+                            print('Fail 3')
+                            GIT_FAIL = True
                     if GIT_FAIL:
                         brl_error('Something went wrong with git commands!')
                                         
