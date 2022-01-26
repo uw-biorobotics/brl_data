@@ -436,6 +436,7 @@ class datafile:
             modified = ''
         for dep in ast.literal_eval(self.metadata.d['Dependencies']):
             if dep in modified:
+                ddep = self.gitrepofolder+dep   #  add in the folder path name
                 DO_AUTOCOMM = False
                 if BRL_auto_git_commit == ASK:
                     com_resp = input('       Code for {:} was modified: auto git commit?? (y/N/?):'.format(dep))
@@ -456,12 +457,15 @@ class datafile:
                     GIT_FAIL = False
                     try:
                         # make git add and commit the new source code.
-                        a = subprocess.check_output(['git','add',dep],cwd=self.gitrepofolder)
+                        #a = subprocess.check_output(['git','add',dep],cwd=self.gitrepofolder)
+                        gitresp1 = subprocess.getoutput('git add ' + ddep)
+
                     except:
                         print('Fail 1')
                         GIT_FAIL = True
                     try: # do the commit
-                        b = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd=self.gitrepofolder)                    
+                        #b = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd=self.gitrepofolder)        
+                        gitresp2 = subprocess.getoutput("git commit -m 'auto commit due to change in "+ddep+"'")   
                     except:
                         print('Fail 2')
                         GIT_FAIL = True
