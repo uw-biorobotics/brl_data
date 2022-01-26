@@ -29,7 +29,7 @@ for dep in ast.literal_eval(md.d['Dependencies']):
         GIT_FAIL = True
     if not GIT_FAIL:
         try:
-            new_commit_info = get_latest_commit('')
+            new_commit_info = get_latest_commit()
         except:
             print('Fail 3')
             GIT_FAIL = True
