@@ -12,6 +12,7 @@ modified = subprocess.check_output('git status | grep modified:',shell=True).dec
 print( 'Git modified: ', modified)
 
 for dep in ast.literal_eval(md.d['Dependencies']):
+    GIT_FAIL = False
     print('looking at dependency: ', dep)
     try:
         # make git add and commit the new source code.
