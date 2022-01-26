@@ -30,8 +30,8 @@ for dep in ast.literal_eval(md.d['Dependencies']):
     if not GIT_FAIL:
         try:
             new_commit_info = get_latest_commit()
-        except:
-            print('Fail 3')
+        except subprocess.CalledProcessError as cpe:
+            print('Fail 3',cpe)
             GIT_FAIL = True
     if GIT_FAIL:
         bd.brl_error('Something went wrong with git commands!')
