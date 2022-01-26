@@ -3,7 +3,7 @@
 import brl_data as bd
 import sys, os, subprocess, ast
 
-#xx
+#xxx
 
 md = bd.metadata()
 
@@ -15,19 +15,20 @@ for dep in ast.literal_eval(md.d['Dependencies']):
     print('looking at dependency: ', dep)
     try:
         # make git add and commit the new source code.
-        gitresp1 = subprocess.check_output(['git','add',dep])
-        print('STEP 1: ', gitresp1)
-    except:
-        print('Fail 1')
+        gitresp1 = subprocess.check_output(['git','add',dep],stderr=subprocess.STDOUT)
+        print('STEP 1: ', str(gitresp1))
+    except subprocess.CalledProcessError as cpe:
+        print('Fail 1',cpe)
         GIT_FAIL = True
     try: # do the commit
-        gitresp2 = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd=self.gitrepofolder)                    
-    except:
-        print('Fail 2')
+        gitresp2 = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"])   
+        print('Step 2: ', str(gitresp2))
+    except subprocess.CalledProcessError as cpe:
+        print('Fail 2',cpe)
         GIT_FAIL = True
     if not GIT_FAIL:
         try:
-            new_commit_info = get_latest_commit(folder=self.gitrepofolder)
+            new_commit_info = get_latest_commit(folder='')
         except:
             print('Fail 3')
             GIT_FAIL = True
