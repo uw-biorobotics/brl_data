@@ -187,13 +187,22 @@ def validator_test():
 if __name__ == '__main__':
     
     USER_INPUT_ALLOWED = False
+    bd.BRL_auto_git_commit = bd.NEVER
     
     if len( sys.argv) == 2:
         if sys.argv[1] == '-userinput':
             USER_INPUT_ALLOWED = True
+            bd.BRL_auto_git_commit = bd.NEVER
+        elif sys.argv[1] == '-gittesting':
+            USER_INPUT_ALLOWED = False
+            bd.BRL_auto_git_commit = bd.ASK
+            OK = input(' This test may generate new git auto-commits: OK? (y/N): ')
+            if OK not in ['Y','y']:
+                quit()
         else:
             print ('illegal option: ',sys.argv[1])
             print ('valid option(s):  -userinput (test user inputs)')
+            print ('                  -gittesting (test git auto functions)')
             quit()
     if len(sys.argv) > 2:
         print('illegal command line options)')
@@ -210,10 +219,11 @@ if __name__ == '__main__':
         print(kw, tv1, file=of)
     of.close() 
     
+    nskip = 0
     
-    #  don't bother with git checking EXCEPT on datafileAppendTest
-    bd.BRL_auto_git_commit = bd.NEVER
+    #
     # now run all the tests.
+    #
     
     paramtest() 
     passstring = ' '*65 + '{:25} PASS'
@@ -226,22 +236,17 @@ if __name__ == '__main__':
     print(passstring.format('readMetaFile_test'))
     validator_test()
     print(passstring.format('validator_test'))
-    
-    #if USER_INPUT_ALLOWED == True:
-    if True:
-        bd.BRL_auto_git_commit = bd.ALWAYS
-    else:
-        print(' '*64,'Git tests  SKIPPED')
+      
     datafileAppendTest()
     print(passstring.format('datafileAppendTest'))
-
-    bd.BRL_auto_git_commit = bd.NEVER
+ 
     
     if USER_INPUT_ALLOWED:
         prefuserdata_test()
         print(passstring.format('prefuserdata_test'))
     else:
         print(' '*64, 'prefuserdata_test  SKIPPED')
+        nskip += 1
     
     metadata_rw_test()
     print(passstring.format('metadata_rw_test'))
@@ -251,7 +256,13 @@ if __name__ == '__main__':
         print(passstring.format('metadata_getuser_test'))
     else:
         print(' '*64, 'metadata_getuser_test,  SKIPPED')
+        nskip += 1
 
 
     print ('\n               ALL TESTS PASSED \n\n')
+    print ('               {:} tests SKIPPED'.format(nskip))
+    if bd.BRL_auto_git_commit == bd.NEVER:
+        print('               NO git testing was selected (NO -gittesting)')
+    if bd.BRL_auto_git_commit == bd.ASK:
+        print('               git testing was optional (-gittesting)')
     
