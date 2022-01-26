@@ -12,6 +12,7 @@
 #
 
 import brl_data as bd
+import sys
 
 n1 = 'testParams1' 
 tv1 = '1234' 
@@ -100,10 +101,10 @@ def datafileAppendTest():
     
     df3.open('w')      # put in some initial data
     store_name = df3.name
-    print('')
-    print('   - - - -',store_name)
-    print('')
-    quit()
+    #print('')
+    #print('   - - - -',store_name)
+    #print('')
+    #quit()
     
     df3.dataN = len(df3.metadata.d['Names'].split(','))
     for i in range(5):
@@ -132,19 +133,17 @@ def metadata_rw_test():
     mdo1 = bd.metadata()
     mdo2 = bd.metadata()
     mdo1.data_file_name = 'metadata_test_file.meta'
-    mdo2.data_file_name = 'metadata_test_file.meta'
+    mdo2.data_file_name = 'metadata_test_file.meta'  # we're not going to read or write it tho
 
-    # write out a metadata file
     # load up values
     for k in mdd.keys():
         mdo1.d[k] = mdd[k]
-    mdo1.save()
+    mdo1.save('')    # write out a metadata file
+   
     # read in a metadata file
-    mdo2.read()
-    
-    print (mdo1.d)
-    print (mdo2.d)
-    assert mdo1.d == mdo2.d
+    mdo2.read()  # read it into a new metadata object
+     
+    assert mdo1.d == mdo2.d,  'metadata_rw_test   FAIL'
 
 def metadata_getuser_test():
     md1 = bd.metadata()
@@ -171,7 +170,10 @@ def readMetaFile_test():
 def prefuserdata_test():
     tvalids = ['v1','v2','v3']
     print('Testing user input utility:')
+    print('  press [ENTER] or enter any data to complete the test ...')
     x = bd.pref_input('try an input','v2',valids=tvalids)
+    assert x in tvalids, 'pref_input FAIL '
+    
     
     # test the datafile validator
 def validator_test():
@@ -184,6 +186,20 @@ def validator_test():
     
 if __name__ == '__main__':
     
+    USER_INPUT_ALLOWED = False
+    
+    if len( sys.argv) == 2:
+        if sys.argv[1] == '-userinput':
+            USER_INPUT_ALLOWED = True
+        else:
+            print ('illegal option: ',sys.argv[1])
+            print ('valid option(s):  -userinput (test user inputs)')
+            quit()
+    if len(sys.argv) > 2:
+        print('illegal command line options)')
+        print ('valid option(s):  -userinput (test user inputs)')
+        quit()
+
     # quickly set up fake param file:    
     keywords = bd.validinputs().knownKeywords
 
@@ -199,34 +215,42 @@ if __name__ == '__main__':
     bd.BRL_auto_git_commit = bd.NEVER
     # now run all the tests.
     
+    paramtest() 
+    passstring = ' '*65 + '{:25} PASS'
+    print(passstring.format('paramtest'))
+
+    datafiletest()
+    print(passstring.format('datafiletest'))
+    
+    readMetaFile_test()
+    print(passstring.format('readMetaFile_test'))
+    validator_test()
+    print(passstring.format('validator_test'))
+    
+    #if USER_INPUT_ALLOWED == True:
     if True:
-        paramtest() 
-        passstring = ' '*65 + '{:25} PASS'
-        print(passstring.format('paramtest'))
+        bd.BRL_auto_git_commit = bd.ALWAYS
+    else:
+        print(' '*64,'Git tests  SKIPPED')
+    datafileAppendTest()
+    print(passstring.format('datafileAppendTest'))
+
+    bd.BRL_auto_git_commit = bd.NEVER
     
-        datafiletest()
-        print(passstring.format('datafiletest'))
-        
-        
-        readMetaFile_test()
-        print(passstring.format('readMetaFile_test'))
-        validator_test()
-        print(passstring.format('validator_test'))
-        
-        bd.BRL_auto_git_commit = bd.ASK
-        datafileAppendTest()
-        print(passstring.format('datafileAppendTest'))
-        bd.BRL_auto_git_commit = bd.NEVER
-        
-    if False:
-        
-    
+    if USER_INPUT_ALLOWED:
         prefuserdata_test()
         print(passstring.format('prefuserdata_test'))
-        metadata_rw_test()
-        print(passstring.format('metadata_rw_test'))
+    else:
+        print(' '*64, 'prefuserdata_test  SKIPPED')
+    
+    metadata_rw_test()
+    print(passstring.format('metadata_rw_test'))
+    
+    if USER_INPUT_ALLOWED:
         metadata_getuser_test()
         print(passstring.format('metadata_getuser_test'))
+    else:
+        print(' '*64, 'metadata_getuser_test,  SKIPPED')
 
 
     print ('\n               ALL TESTS PASSED \n\n')
