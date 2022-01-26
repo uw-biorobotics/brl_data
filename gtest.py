@@ -16,13 +16,15 @@ for dep in ast.literal_eval(md.d['Dependencies']):
     print('looking at dependency: ', dep)
     try:
         # make git add and commit the new source code.
-        gitresp1 = subprocess.check_output(['git','add',dep],stderr=subprocess.STDOUT)
-        print('STEP 1: ', str(gitresp1))
+        #gitresp1 = subprocess.check_output(['git','add',dep],stderr=subprocess.STDOUT)
+        gitresp1 = subprocess.getoutput('git add ' + dep)
+        print('STEP 1: ', gitresp1)
     except subprocess.CalledProcessError as cpe:
         print('Fail 1',cpe)
         GIT_FAIL = True
     try: # do the commit
-        gitresp2 = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"])   
+        #gitresp2 = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd='')   
+        gitresp2 = subprocess.getoutput("git commit -m 'auto commit due to change in "+dep+"'")   
         print('Step 2: ', str(gitresp2))
     except subprocess.CalledProcessError as cpe:
         print('Fail 2',cpe)
