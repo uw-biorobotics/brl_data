@@ -237,6 +237,9 @@ class datafile:
     #
     #   folder is an absolute or relative pathname which 
     #     will be pre-pended to the filename 
+    #
+    #   to use the "current" folder for everything, just enter
+    #    '' for both folders.
     def set_folders(self, datafolder, gitfolder):
         self.setFoldersFlag = True
         self.set_data_folder(datafolder)
@@ -321,7 +324,7 @@ class datafile:
 
     # if you want to open a specific existing file,f
     #   just set MyDatafile.name = "** your filename **"
-    #   before calling open. or use tname= parameter
+    #   before calling open. or use tname= to set a name you want
     def open(self,mode='w',tname='none_flag'):
         vis = validinputs()
         if not self.setFoldersFlag:
