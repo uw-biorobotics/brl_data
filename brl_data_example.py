@@ -14,6 +14,20 @@
 import brl_data as bd
 import math as m
  
+ 
+#  How to treat the situation where code has changed
+#   between the time a file was first opened and some data is appended
+#   This flag specifies: what to do if the code has been modified AFTER
+#   the file was first opened.   If ALWAYS (or user enters 'Y'), then 
+#   create a new commit for the code and add it to the metadata.
+
+# Options:   
+#     bd.NEVER      never do auto-commits of the source code
+#     bd.ASK        if code has changed since last commit ask user if
+#                      autocommit should be done
+#     bd.ALWAYS     just automatically generate autocommits when needed
+BRL_auto_git_commit = bd.ASK
+
 ####################################################################
 ##   Generate some fake data  
 
@@ -44,11 +58,15 @@ for i in range(100):
 #    data file type    (valid list is in the class validinputs())  (experiment, simulation, etc)
 df1 = bd.datafile('testingFile','BH','experiment')
 
+
+
 #  after defining a datafile, you have to set it's two default folders as follows
 #  set up folders defining should the datafiles go, and where is the source code
 datafiledir = ''          # '' means same folder as code runs 
 codedir = ''              # '' means same folder as currently running
 df1.set_folders(datafiledir, codedir)     # use the same folder for brl_data_example
+
+
 
 
 ##  Now lets set the metadata for this datafile (but this can be done after saving data, right before close()
