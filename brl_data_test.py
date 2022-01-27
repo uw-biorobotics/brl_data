@@ -182,13 +182,22 @@ def validator_test():
     assert df3.validate() == False
     print('The file data is valid: ', df3.validate(),'  (correct answer: False)')
       
-        
+    
+def bad_option_exit():    
+    print ('\n\nillegal command line input: ',sys.argv[1:])
+    print ('valid option(s):  -userinput (test user inputs)')
+    print ('                  -gittesting (test git auto functions)')
+    print('\n\n')
+    quit()
     
 if __name__ == '__main__':
     
     USER_INPUT_ALLOWED = False
     bd.BRL_auto_git_commit = bd.NEVER
     
+    if len(sys.argv) > 2:
+        bad_option_exit()
+        
     if len( sys.argv) == 2:
         if sys.argv[1] == '-userinput':
             USER_INPUT_ALLOWED = True
@@ -200,14 +209,8 @@ if __name__ == '__main__':
             if OK not in ['Y','y']:
                 quit()
         else:
-            print ('illegal option: ',sys.argv[1])
-            print ('valid option(s):  -userinput (test user inputs)')
-            print ('                  -gittesting (test git auto functions)')
-            quit()
-    if len(sys.argv) > 2:
-        print('illegal command line options)')
-        print ('valid option(s):  -userinput (test user inputs)')
-        quit()
+            bad_option_exit()
+            
 
     # quickly set up fake param file:    
     keywords = bd.validinputs().knownKeywords
@@ -223,7 +226,7 @@ if __name__ == '__main__':
     
     #
     # now run all the tests.
-    #
+    # 
     
     paramtest() 
     passstring = ' '*65 + '{:25} PASS'
