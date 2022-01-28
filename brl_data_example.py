@@ -26,7 +26,7 @@ import math as m
 #     bd.ASK        if code has changed since last commit ask user if
 #                      autocommit should be done
 #     bd.ALWAYS     just automatically generate autocommits when needed
-BRL_auto_git_commit = bd.ASK
+BRL_auto_git_commit = bd.NEVER
 
 ####################################################################
 ##   Generate some fake data  
@@ -99,4 +99,31 @@ for i,d in enumerate(d1):
 
 df1.close()   # all done
 
+filename = df1.name   #  we need to keep the old filename around for next part below
+
+
+#
+#
+#            Example of appending to existing datafile
+#
+#                 (for example you want to add data once per day)
+#
+
+
+
+#   Here's how to append data to a file if it is closed
+addlength = int(len(d1)/4)   # we'll append a bit of our fake data 
+
+# we could have re-used df1, but to simulate the case of running once per day
+#   we'll instantiate a new datafile
+
+df2 = bd.datafile('dummy','dummy','dummy') # we'll reset the file name
+df2.name = filename
+df2.set_folders('','')
+df2.open(mode='a')  # open for append mode
+for j in range(addlength):
+    i = j+33   # just to make the "new" data slightly more interesting
+    row = [d1[i], d2[i], d3[i], d4[i]]
+    df2.write(row)
+df2.close()
 quit()

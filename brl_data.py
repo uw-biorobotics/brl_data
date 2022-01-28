@@ -27,7 +27,11 @@ ALWAYS = 2
 #   This flag specifies: what to do if the code has been modified AFTER
 #   the file was first opened.   If ALWAYS (or user enters 'Y'), then 
 #   create a new commit for the code and add it to the metadata.
-BRL_auto_git_commit = ASK
+
+BRL_auto_git_commit = NEVER
+# best to set this in your application as follows
+# import brl_data as bd
+# BRL_auto_git_commit = bd.ASK
 
 ######################   Utilities
 
@@ -329,17 +333,22 @@ class datafile:
         vis = validinputs()
         if not self.setFoldersFlag:
             brl_error('tried to open a datafile without calling set_folders() first.')
+            
         if tname != 'none_flag':
             if mode == 'w' and os.path.exists(tname):
                 brl_error('Attempting to overwrite an existing file ('+tname+') dont you want to append?)')
             self.name = tname
+            
         if self.name == None:
             brl_error('output file name has not been set')
-        if not self.validate():
-            self.request_user_data()
-        self.metadata.d['OpenTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
-        self.metadata.d['Nrows'] = 0
-        if mode == 'w':   # write mode
+            
+        # here we are starting a brand new file
+        if mode=='w':  # don't do this for append mode
+            if not self.validate():
+                self.request_user_data()
+            self.metadata.d['OpenTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
+            
+            self.metadata.d['Nrows'] = 0
             ##
             #  Check if source code is modified and optionally automatically commit it
             # find the commit data
@@ -348,6 +357,7 @@ class datafile:
                 self.metadata.d['GitLatestCommit'] = commit_data
             self.fd = open(self.name,mode)
             
+        # here we are appending to an existing datafile
         elif mode == 'a':   # append mode
             ##
             #  Check if source code is modified and optionally automatically commit it
