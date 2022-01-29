@@ -141,7 +141,7 @@ class metadata:
         fdmd.close()
         
     # this reads in the metadata from a file (which might include comments)
-    #  Note that dictionary will still contain string values.  e.g. Lists must
+    #  Note that dictionary should always contain string values.  e.g. Lists must
     #  be parsed, ints must be cast etc.
     #
     #  sometimes the metadata file might be missing but we want to be robust to that
@@ -225,7 +225,6 @@ class datafile:
         self.ttype = testtype  # defined in "validinputs" class
         self.ftype = '.csv'  # only .csv at this point
         self.fd = None  # file descriptor
-        self.name = ''    # can override this any time
         self.folder = ''  # can direct datafiles into a folder
         self.gitrepofolder = ''   # place where current code lives
         self.output_class = None  # for example:  csv.writer()
@@ -234,6 +233,8 @@ class datafile:
         self.metadata.d['Nrows'] = 0 # number of rows of data written so far.
         self.dataN = 0
         self.setFoldersFlag = False
+        self.gen_name()    # can override this any time
+        #                 by  self.set_filename('newname')
         
     # set correct folders for this datafile
     #   datafolder     where to put the datafile
@@ -250,15 +251,29 @@ class datafile:
         self.gitrepofolder = gitfolder
         # these can only be done after folders are set
         self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
-        self.gen_name()  # generate output filename
+        if self.name == '':
+            self.gen_name()
+        if '/' in self.name:
+            l = self.name.split('/')
+            self.name = l[-1]  # get rid of old folder path
+            self.name.replace('/','') # just in case
+        self.add_folder_to_fname()  # generate output filename
         self.metadata.data_file_name = self.name
 
-
+    # use this primarily to re-use an old existing filename for append mode
+    def set_filename(self, name): 
+        self.name = name
+        self.add_folder_to_fname()  # generate output pathname
+        # record the name in metada
+        self.metadata.data_file_name = self.name
+        
     def set_data_folder(self,folname):
         if self.fd:
             brl_error('Its too late to change folder to'+folname+'. datafile already open')
         if '.' in folname: 
             brl_error('You cannot use . in folder name: ' + folname)
+        if len(folname) > 0 and not os.path.exists(folname):
+            brl_error('Folder {:} does not exist please create it and try again'.format(folname))
         self.folder=folname
         
     def gen_name(self):
@@ -271,9 +286,7 @@ class datafile:
         if type(self.name) != type('a string'):
             brl_error('problem generating filename')
         if '.' in self.name.replace(self.ftype,''):
-            brl_error(' You cannot have a period (.) in base filename: '+ self.name.replace(self.ftype,''))
-        print('Generated filename: '+self.name)
-        
+            brl_error(' You cannot have a period (.) in base filename: '+ self.name.replace(self.ftype,''))       
         
     def set_metadata(self,names, types, notes):
         N = len(names)
@@ -368,21 +381,11 @@ class datafile:
                 
             if os.path.exists(self.name):
                 ## here we are updating / adding to an existing file so we need to 
-                #read in and update metadata
+                #read in metadata
                 tmd = self.read_oldmetadata().d
-                self.metadata.d['Nrows'] = tmd['Nrows']     # these two should reference the ORIGINAL open
-                self.metadata.d['OpenTime']=tmd['OpenTime'] #  
-                #
-                # now some sanity checks
-                if self.metadata.d['Ncols'] != tmd['Ncols']:
-                    brl_error('Appending to a file with DIFFERENT number of columns: {:} vs {:}'.format(self.metadata.d['Ncols'],tmd['Ncols']))
-                if self.metadata.d['Names'] != tmd['Names']:
-                    brl_error('Appending to a file with DIFFERENT column names: {:} vs {:}'.format(self.metadata.d['Names'],tmd['Names']))
-                if self.metadata.d['Types'] != tmd['Types']:
-                    brl_error('Appending to a file with DIFFERENT column types: {:} vs {:}'.format(self.metadata.d['Types'],tmd['Types']))
+ 
                             
-                 
-            ###########################################
+            ########################################
             ## finally, open the file in append mode
             self.fd = open(self.name,'a')
             

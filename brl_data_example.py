@@ -29,7 +29,7 @@ import math as m
 BRL_auto_git_commit = bd.NEVER
 
 ####################################################################
-##   Generate some fake data  
+##                        Generate some fake data  
 
 d1 = []
 d2 = []
@@ -62,11 +62,11 @@ df1 = bd.datafile('testingFile','BH','experiment')
 
 #  after defining a datafile, you have to set it's two default folders as follows
 #  set up folders defining should the datafiles go, and where is the source code
-datafiledir = ''          # '' means same folder as code runs 
+datafiledir = 'data'          # '' means same folder as code runs 
 codedir = ''              # '' means same folder as currently running
 df1.set_folders(datafiledir, codedir)     # use the same folder for brl_data_example
 
-
+print('example: datafile name: ',df1.name)
 
 
 ##  Now lets set the metadata for this datafile (but this can be done after saving data, right before close()
@@ -81,6 +81,7 @@ col_comments = [
     'Relative to atmospheric at 700 ft. elevation'    ]
 df1.set_metadata(col_names, col_types, col_comments)
 #
+
 #   we also have some custom metadata that is special to our particular experiment
 df1.metadata.d['Location'] = 'Site 5, Antarctic Base'
 
@@ -91,7 +92,8 @@ else:
     print('somethings wrong with datafile or metadata setup')
     
 df1.open()  # let's open the file (default is for writing)
-    
+
+
 ##  Now lets write out data
 for i,d in enumerate(d1):
     row = [d, d2[i], d3[i], d4[i]]
@@ -99,7 +101,7 @@ for i,d in enumerate(d1):
 
 df1.close()   # all done
 
-filename = df1.name   #  we need to keep the old filename around for next part below
+oldfilename = df1.name   #  we need to keep the old filename around for next part below
 
 
 #
@@ -110,20 +112,26 @@ filename = df1.name   #  we need to keep the old filename around for next part b
 #
 
 
+if True:  # False to turn off append mode test
 
-#   Here's how to append data to a file if it is closed
-addlength = int(len(d1)/4)   # we'll append a bit of our fake data 
+    #   Here's how to append data to a file if it is closed
+    addlength = int(len(d1)/4)   # we'll append a bit of our fake data 
 
-# we could have re-used df1, but to simulate the case of running once per day
-#   we'll instantiate a new datafile
+    # we could have re-used df1, but to simulate the case of running once per day
+    #   we'll instantiate a new datafile
 
-df2 = bd.datafile('dummy','dummy','dummy') # we'll reset the file name
-df2.name = filename
-df2.set_folders('','')
-df2.open(mode='a')  # open for append mode
-for j in range(addlength):
-    i = j+33   # just to make the "new" data slightly more interesting
-    row = [d1[i], d2[i], d3[i], d4[i]]
-    df2.write(row)
-df2.close()
+    df2 = bd.datafile('dummy','dummy','dummy') # we'll reset the file name
+    df2.set_folders('','')
+    df2.set_filename(oldfilename)
+    
+    ###  read in the old metadata so we can update it
+    df2.metadata.read()
+
+    df2.open(mode='a')  # open for append mode
+    for j in range(addlength):
+        i = j+33   # just to make the "new" data slightly more interesting
+        row = [d1[i], d2[i], d3[i], d4[i]]
+        df2.write(row)
+    df2.close()
+    
 quit()
