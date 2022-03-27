@@ -27,11 +27,7 @@ ALWAYS = 2
 #   This flag specifies: what to do if the code has been modified AFTER
 #   the file was first opened.   If ALWAYS (or user enters 'Y'), then 
 #   create a new commit for the code and add it to the metadata.
-
-BRL_auto_git_commit = NEVER
-# best to set this in your application as follows
-# import brl_data as bd
-# BRL_auto_git_commit = bd.ASK
+BRL_auto_git_commit = ASK
 
 ######################   Utilities
 
@@ -109,7 +105,7 @@ def brl_error(msg,fatal=True):
 
 class validinputs:
     def __init__(self):
-        self.validtesttypes = ['simulation','experiment','single', 'longterm']  # examples only
+        self.validtesttypes = ['simulation','single', 'longterm']  # examples only
         self.validfiletypes = ['.csv', '.json']       # others?  or standardize on csv??
         validPfTypes = ['production','communication']
         self.production_keywords= ['homegitFolder', 'debugOutput', 'homedataFolder','dataFolder','weekdays','ops_per_day', 'duration_mean','duration_sd','start_hour','end_hour','end_date','ename','homeFolder','githomeFolder','datahomeFolder']  # production keywords
@@ -126,8 +122,8 @@ class metadata:
     def __init__(self):
         self.d = {}  # the actual metadata 
         self.data_file_name = '' 
-        self.d['Dependencies'] = str([ sys.argv[0],'brl_data.py' ])
-     
+        self.d['Dependencies'] = str([ sys.argv[0],'brl_data.py','icarus.py' ])
+    
     # write out metadata (OVERWRITE old metadata)
     def save(self,folder):
         if len(self.data_file_name) == 0:
@@ -141,8 +137,8 @@ class metadata:
         fdmd.close()
         
     # this reads in the metadata from a file (which might include comments)
-    #  Note that dictionary should always contain string values.  e.g. Lists must
-    #  be parsed, ints must be cast etc.
+    #  Note that dictionary will still contain string values.  e.g. Lists must
+    #  be parsed, ints must be cast etc. 
     #
     #  sometimes the metadata file might be missing but we want to be robust to that
     def read(self):
@@ -161,14 +157,19 @@ class metadata:
                     l1 = line
                 l1 = l1.strip()
                 if len(l1)>0:
-                    w1, w2 = l1.split(' ',1)  # white space split
+                    #print('MD file line: ', l1)
+                    try:
+                        w1, w2 = l1.split(' ',1)  # white space split
+                    except:
+                        w1 = l1
+                        w2 = ''
                     w1 = w1.strip()
                     w2 = w2.strip()
                     self.d[w1] = w2.replace('"','')
             fdmd.close()
             return True
         else:
-            return False
+            return False 
         
     def get_user_basics(self): 
         vis = validinputs()
@@ -187,13 +188,10 @@ class metadata:
         n2 = n2[0]
         
         smart_query(self.d,'Initials', msg='Your Initials',example=n1+n2)
-        thedate = str(dt.date.today())
-        smart_query(self.d,'OpenTime', msg='Creation Date:', example=thedate)
-        vinp = validinputs()
-        vf = vinp.validfiletypes
-        vt = vinp.validtesttypes
-        smart_query(self.d,'FileType', example=vf,valids=vis.validfiletypes)
-        smart_query(self.d,'TestType', example=vt,valids=vis.validtesttypes)
+        smart_query(self.d,'OpenTime', msg='Creation Date:', example= '07-March-2017')
+     
+        smart_query(self.d,'FileType', example='.csv or .json',valids=vis.validfiletypes)
+        smart_query(self.d,'TestType', example='single or longterm',valids=vis.validtesttypes)
         
 
     def __repr__(self):
@@ -214,10 +212,6 @@ class metadata:
 #  creation and I/O for numerical datafiles
 #   TODO: create a class for image files and a class for video files
 
-#  descrip_str     A descriptive string for the dataset
-#  inv_init        Investigator's initials
-#  testtype        "type" of test generating the data (see validinputs class)
-
 class datafile:
     def __init__(self, descrip_str, inv_init, testtype):
         self.descrip = descrip_str
@@ -225,6 +219,7 @@ class datafile:
         self.ttype = testtype  # defined in "validinputs" class
         self.ftype = '.csv'  # only .csv at this point
         self.fd = None  # file descriptor
+        self.name = ''    # can override this any time
         self.folder = ''  # can direct datafiles into a folder
         self.gitrepofolder = ''   # place where current code lives
         self.output_class = None  # for example:  csv.writer()
@@ -233,47 +228,22 @@ class datafile:
         self.metadata.d['Nrows'] = 0 # number of rows of data written so far.
         self.dataN = 0
         self.setFoldersFlag = False
-        self.gen_name()    # can override this any time
-        #                 by  self.set_filename('newname')
         
-    # set correct folders for this datafile
-    #   datafolder     where to put the datafile
-    #   gitfolder      where is your current source code
-    #
-    #   folder is an absolute or relative pathname which 
-    #     will be pre-pended to the filename 
-    #
-    #   to use the "current" folder for everything, just enter
-    #    '' for both folders.
     def set_folders(self, datafolder, gitfolder):
         self.setFoldersFlag = True
         self.set_data_folder(datafolder)
         self.gitrepofolder = gitfolder
         # these can only be done after folders are set
         self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
-        if self.name == '':
-            self.gen_name()
-        if '/' in self.name:
-            l = self.name.split('/')
-            self.name = l[-1]  # get rid of old folder path
-            self.name.replace('/','') # just in case
-        self.add_folder_to_fname()  # generate output filename
+        self.gen_name()  # generate output filename
         self.metadata.data_file_name = self.name
 
-    # use this primarily to re-use an old existing filename for append mode
-    def set_filename(self, name): 
-        self.name = name
-        self.add_folder_to_fname()  # generate output pathname
-        # record the name in metada
-        self.metadata.data_file_name = self.name
-        
+
     def set_data_folder(self,folname):
         if self.fd:
             brl_error('Its too late to change folder to'+folname+'. datafile already open')
         if '.' in folname: 
             brl_error('You cannot use . in folder name: ' + folname)
-        if len(folname) > 0 and not os.path.exists(folname):
-            brl_error('Folder {:} does not exist please create it and try again'.format(folname))
         self.folder=folname
         
     def gen_name(self):
@@ -286,7 +256,9 @@ class datafile:
         if type(self.name) != type('a string'):
             brl_error('problem generating filename')
         if '.' in self.name.replace(self.ftype,''):
-            brl_error(' You cannot have a period (.) in base filename: '+ self.name.replace(self.ftype,''))       
+            brl_error(' You cannot have a period (.) in base filename: '+ self.name.replace(self.ftype,''))
+        print('Generated filename: '+self.name)
+        
         
     def set_metadata(self,names, types, notes):
         N = len(names)
@@ -341,27 +313,22 @@ class datafile:
 
     # if you want to open a specific existing file,f
     #   just set MyDatafile.name = "** your filename **"
-    #   before calling open. or use tname= to set a name you want
+    #   before calling open. or use tname= parameter
     def open(self,mode='w',tname='none_flag'):
         vis = validinputs()
         if not self.setFoldersFlag:
             brl_error('tried to open a datafile without calling set_folders() first.')
-            
         if tname != 'none_flag':
             if mode == 'w' and os.path.exists(tname):
                 brl_error('Attempting to overwrite an existing file ('+tname+') dont you want to append?)')
             self.name = tname
-            
         if self.name == None:
             brl_error('output file name has not been set')
-            
-        # here we are starting a brand new file
-        if mode=='w':  # don't do this for append mode
-            if not self.validate():
-                self.request_user_data()
-            self.metadata.d['OpenTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
-            
-            self.metadata.d['Nrows'] = 0
+        if not self.validate():
+            self.request_user_data()
+        self.metadata.d['OpenTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
+        self.metadata.d['Nrows'] = 0
+        if mode == 'w':   # write mode
             ##
             #  Check if source code is modified and optionally automatically commit it
             # find the commit data
@@ -370,7 +337,6 @@ class datafile:
                 self.metadata.d['GitLatestCommit'] = commit_data
             self.fd = open(self.name,mode)
             
-        # here we are appending to an existing datafile
         elif mode == 'a':   # append mode
             ##
             #  Check if source code is modified and optionally automatically commit it
@@ -381,11 +347,21 @@ class datafile:
                 
             if os.path.exists(self.name):
                 ## here we are updating / adding to an existing file so we need to 
-                #read in metadata
+                #read in and update metadata
                 tmd = self.read_oldmetadata().d
- 
+                self.metadata.d['Nrows'] = tmd['Nrows']     # these two should reference the ORIGINAL open
+                self.metadata.d['OpenTime']=tmd['OpenTime'] #  
+                #
+                # now some sanity checks
+                if self.metadata.d['Ncols'] != tmd['Ncols']:
+                    brl_error('Appending to a file with DIFFERENT number of columns: {:} vs {:}'.format(self.metadata.d['Ncols'],tmd['Ncols']))
+                if self.metadata.d['Names'] != tmd['Names']:
+                    brl_error('Appending to a file with DIFFERENT column names: {:} vs {:}'.format(self.metadata.d['Names'],tmd['Names']))
+                if self.metadata.d['Types'] != tmd['Types']:
+                    brl_error('Appending to a file with DIFFERENT column types: {:} vs {:}'.format(self.metadata.d['Types'],tmd['Types']))
                             
-            ########################################
+                 
+            ###########################################
             ## finally, open the file in append mode
             self.fd = open(self.name,'a')
             
@@ -404,7 +380,7 @@ class datafile:
         if self.fd == None:
             brl_error('Trying to close a datafile that has not been opened yet')
         else:
-            self.fd.close()   # close the file descriptor
+            self.fd.close()
             # now output the metadata
             self.metadata.d['CloseTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
             #
@@ -443,27 +419,22 @@ class datafile:
         #
         #
         try: # may fail if no modified files, not a git repo etc. 
-            if self.gitrepofolder == '':
-                modified = subprocess.check_output('git status | grep modified:',shell=True).decode('UTF-8').strip().replace('\n',' | ') 
-            else:
-                modified = subprocess.check_output('git status | grep modified:',cwd=self.gitrepofolder,shell=True).decode('UTF-8').strip().replace('\n',' | ') 
+            modified = subprocess.check_output('git status | grep modified:',cwd=self.gitrepofolder,shell=True).decode('UTF-8').strip().replace('\n',' | ') 
         except:
             print('Code is unmodified')
             modified = ''
         for dep in ast.literal_eval(self.metadata.d['Dependencies']):
             if dep in modified:
-                ddep = self.gitrepofolder+dep   #  add in the folder path name
                 DO_AUTOCOMM = False
                 if BRL_auto_git_commit == ASK:
-                    com_resp = input('       Code for {:} was modified: auto git commit?? (y/N/?):'.format(dep))
-                    com_resp = com_resp.lower()
+                    com_resp = input('       Code for {:} was modified: auto git commit?? (Y/n/?):'.format(dep))
                     if com_resp == '':
-                        DO_AUTOCOMM = False
+                        DO_AUTOCOMM = True
                     if com_resp == '?':
                         print('''\nDo you want to automatically generate a git add/commit to reflect 
-                            current state of this code? (y/N).   Quitting, please start over...\n\n''')
+                            current state of this code? (Y/n).   Quitting and starting over...\n\n''')
                         quit()
-                    if com_resp == 'y':
+                    if com_resp.lower() != 'n':
                         DO_AUTOCOMM = True
                 if BRL_auto_git_commit == ALWAYS:
                     DO_AUTOCOMM = True
@@ -473,24 +444,20 @@ class datafile:
                     GIT_FAIL = False
                     try:
                         # make git add and commit the new source code.
-                        #a = subprocess.check_output(['git','add',dep],cwd=self.gitrepofolder)
-                        gitresp1 = subprocess.getoutput('git add ' + ddep)
-
+                        a = subprocess.check_output(['git','add',dep],cwd=self.gitrepofolder)
                     except:
                         print('Fail 1')
                         GIT_FAIL = True
                     try: # do the commit
-                        #b = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd=self.gitrepofolder)        
-                        gitresp2 = subprocess.getoutput("git commit -m 'auto commit due to change in "+ddep+"'")   
+                        b = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd=self.gitrepofolder)                    
                     except:
                         print('Fail 2')
                         GIT_FAIL = True
-                    if not GIT_FAIL:
-                        try:
-                            new_commit_info = get_latest_commit(folder=self.gitrepofolder)
-                        except:
-                            print('Fail 3')
-                            GIT_FAIL = True
+                    try:
+                        new_commit_info = get_latest_commit(folder=self.gitrepofolder)
+                    except:
+                        print('Fail 3')
+                        GIT_FAIL = True
                     if GIT_FAIL:
                         brl_error('Something went wrong with git commands!')
                                         
@@ -501,14 +468,11 @@ class datafile:
             
 def get_latest_commit(folder='no folder'):
     if folder=='no folder':
-        brl_error('get_latest_commit should be called with an explict folder\nUse empty string ("") for same folder as your running code')
+        brl_error('get_latest_commit should be called with an explict folder')
         tmp = subprocess.check_output('git log', shell=True).decode('UTF-8').split('\n')
     else:
     #    brl_error('checking git in folder: '+folder,fatal=False)
-        if folder == '':
-            tmp = subprocess.check_output('git log', shell=True).decode('UTF-8').split('\n')
-        else:
-            tmp = subprocess.check_output('git log',cwd=folder, shell=True).decode('UTF-8').split('\n')
+        tmp = subprocess.check_output('git log',cwd=folder, shell=True).decode('UTF-8').split('\n')
 
     return str('Git: '+tmp[0]+' '+tmp[4].strip())
     
@@ -522,7 +486,10 @@ def get_latest_commit(folder='no folder'):
 
 class param_file:
     def __init__(self,pfname):
-        vfs = validinputs() 
+        vfs = validinputs()
+        #validPfTypes = ['production','communication']
+        #self.production_keywords= ['weekdays','ops_per_day', 'duration_mean','duration_sd','start_hour','end_hour','end_date','ename']  # production keywords
+        #self.communication_keywords = ['command_nbytes','feedback_nbytes']  # coms. keywords
         self.name = pfname 
         self.params = {}    # values read from or written to param file
         
