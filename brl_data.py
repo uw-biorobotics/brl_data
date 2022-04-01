@@ -38,6 +38,11 @@ def brl_id(n):
     m = int(n/2)
     return u[0:m] + u[-m:-1]
 
+
+###############   Wrap the input function so it can be mocked
+def t_input(message):
+    return(input(message))
+
 #############  accept some input with a default example
 #        and optional list of valid responses
 #  "Prefilled input" with optional validation
@@ -47,7 +52,7 @@ def brl_id(n):
 #
 def pref_input(message, example, valids=None):
     while True:
-        vin = input(message+' ({:}):'.format(example))
+        vin = t_input(message+' ({:}):'.format(example))
         if vin == '':
             return example
         else:
@@ -314,11 +319,11 @@ class datafile:
     # if you want to open a specific existing file,f
     #   just set MyDatafile.name = "** your filename **"
     #   before calling open. or use tname= parameter
-    def open(self,mode='w',tname='none_flag'):
+    def open(self,mode='w',tname=None):
         vis = validinputs()
         if not self.setFoldersFlag:
             brl_error('tried to open a datafile without calling set_folders() first.')
-        if tname != 'none_flag':
+        if tname != None:
             if mode == 'w' and os.path.exists(tname):
                 brl_error('Attempting to overwrite an existing file ('+tname+') dont you want to append?)')
             self.name = tname
@@ -519,6 +524,7 @@ class param_file:
                         self.params[kw] = val
                     else:
                         brl_error('unknown keyword: '+kw,fatal=True)
+        fp.close()
     
     def __repr__(self):
         str = '----------------------------------------------\n'
