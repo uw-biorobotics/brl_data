@@ -471,6 +471,8 @@ def get_latest_commit(folder='no folder'):
         brl_error('get_latest_commit should be called with an explict folder')
         tmp = subprocess.check_output('git log', shell=True).decode('UTF-8').split('\n')
     else:
+        if folder=='':
+            folder = subprocess.check_output('pwd',shell=True).strip()
     #    brl_error('checking git in folder: '+folder,fatal=False)
         tmp = subprocess.check_output('git log',cwd=folder, shell=True).decode('UTF-8').split('\n')
 
