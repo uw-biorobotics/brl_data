@@ -14,8 +14,8 @@
 import brl_data as bd
 import sys
 
-n1 = 'testParams1' 
-tv1 = '1234' 
+testParamFileName = 'testParams1' 
+testParamValue = '1234' 
 
 #
 #  See bottom (__main__()) for overall test flow 
@@ -26,7 +26,7 @@ tv1 = '1234'
 #
 def paramtest():
     ## first instatiate a parameter file
-    pf1 = bd.param_file(n1)      
+    pf1 = bd.param_file(testParamFileName)      
     
     # read it
     pf1.read() 
@@ -36,7 +36,7 @@ def paramtest():
     
     ##  test that the params are read in right (with meaningless values)
     for k in pf1.params.keys():
-        assert pf1.params[k] == tv1
+        assert pf1.params[k] == testParamValue
          
 #
 # test the datafile class        
@@ -69,9 +69,9 @@ def datafiletest():
     #    col types 
     #    col comments (desecrip for each column
     df1.metadata.d['TESTING CUSTOM'] = ' custom metadata can be added.'
-    
+    print('datafiletest: got here...')
     assert df1.validate() == True   # this should be a valid datafile
-    
+    print('datafiletest: validation asserted')
     df1.close()
     
     ###  Test file data input routine
@@ -157,7 +157,7 @@ def metadata_getuser_test():
    # test the ability to read in old metadata from an existing metadata file.
 def readMetaFile_test():
     df3 = bd.datafile('testfile','BH','single')
-    md = df3.read_oldmetadata(tname='tmp.meta')
+    md = df3.read_oldmetadata(tname='readMetaFile_test_file.meta')
     t = md.d['Names'].replace('[','').replace(']','')
     nameslist = t.split(',')
     assert len(nameslist) == int(md.d['Ncols'])
@@ -190,12 +190,18 @@ def bad_option_exit():
     print('\n\n')
     quit()
     
+    
+#
+###############     Main   ############################################################
+###############            ############################################################
+#
+    
 if __name__ == '__main__':
     
     USER_INPUT_ALLOWED = False
     bd.BRL_auto_git_commit = bd.NEVER
     
-    if len(sys.argv) > 2:
+    if len(sys.argv) != 2 :
         bad_option_exit()
         
     if len( sys.argv) == 2:
