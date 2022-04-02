@@ -56,7 +56,7 @@ for i in range(100):
 #    descriptive name (testingFile)
 #    investigator initials (BH_
 #    data file type    (valid list is in the class validinputs())  (experiment, simulation, etc)
-df1 = bd.datafile('testingFile','BH','experiment')
+df1 = bd.datafile('testingFile','BH','single')
 
 
 
@@ -101,7 +101,8 @@ for i,d in enumerate(d1):
 
 df1.close()   # all done
 
-oldfilename = df1.name   #  we need to keep the old filename around for next part below
+#  we need to keep the old filename around for next part below
+oldfilename = df1.name   
 
 
 #
@@ -109,20 +110,22 @@ oldfilename = df1.name   #  we need to keep the old filename around for next par
 #            Example of appending to existing datafile
 #
 #                 (for example you want to add data once per day)
+#                 (if you run multiple executions don't forget to keep track
+#                  of your filename somehow!).
 #
 
+# if you turn off appending.  The file size will be smaller.
+if True:  # False to turn off append mode example
 
-if True:  # False to turn off append mode test
 
     #   Here's how to append data to a file if it is closed
     addlength = int(len(d1)/4)   # we'll append a bit of our fake data 
 
     # we could have re-used df1, but to simulate the case of running once per day
     #   we'll instantiate a new datafile
-
-    df2 = bd.datafile('dummy','dummy','dummy') # we'll reset the file name
+    df2 = bd.datafile('Description','AB','single') # we'll reset the file name
     df2.set_folders('','')
-    df2.set_filename(oldfilename)
+    df2.set_both_filenames(oldfilename)  # set both data and metadata names
     
     ###  read in the old metadata so we can update it
     df2.metadata.read()

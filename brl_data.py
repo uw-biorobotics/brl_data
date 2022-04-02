@@ -129,6 +129,11 @@ class metadata:
         self.data_file_name = '' 
         self.d['Dependencies'] = str([ sys.argv[0],'brl_data.py','icarus.py' ])
     
+    def set_data_file_name(self,name):
+        if (not '.csv' in name):
+            brl_error('metadata filename SHOULD include .csv')
+        self.data_file_name = name
+        
     # write out metadata (OVERWRITE old metadata)
     def save(self,folder):
         if len(self.data_file_name) == 0:
@@ -235,6 +240,14 @@ class datafile:
         self.setFoldersFlag = False
         
     def set_folders(self, datafolder, gitfolder):
+        dirsOK = True
+        #'' is allowed, to mean the current directory
+        if (not os.path.isdir(datafolder)) and datafolder != '':
+            dirsOK = False
+        if (not os.path.isdir(gitfolder)) and  gitfolder != '':
+            dirsOK = False
+        if not dirsOK:
+            brl_error('One of the requested directories ({:}, {:}) does not exist'.format(datafolder,gitfolder))
         self.setFoldersFlag = True
         self.set_data_folder(datafolder)
         self.gitrepofolder = gitfolder
@@ -242,7 +255,14 @@ class datafile:
         self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
         self.gen_name()  # generate output filename
         self.metadata.data_file_name = self.name
-
+        
+        
+    def set_both_filenames(self, newname):
+        self.name = newname
+        self.metadata.set_data_file_name(newname)
+                
+    def set_filenames(self,newname):
+        self.name = newname
 
     def set_data_folder(self,folname):
         if self.fd:
