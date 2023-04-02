@@ -133,7 +133,7 @@ class metadata:
         if (not '.csv' in name):
             brl_error('metadata filename SHOULD include .csv')
         self.data_file_name = name
-        
+
     # write out metadata (OVERWRITE old metadata)
     def save(self,folder):
         if len(self.data_file_name) == 0:
@@ -142,10 +142,35 @@ class metadata:
         mdfn = self.data_file_name.split('.')[0] + '.meta'
         print('saving metada as '+mdfn)
         fdmd = open(mdfn,'w')
-        for k in self.d.keys(): 
+        for k in self.d.keys():
             print('{0:20} "{1:}"'.format(k, str(self.d[k])),file=fdmd)
         fdmd.close()
-        
+
+
+    # write out metadata as JSON (OVERWRITE old metadata json file)
+    #   JSON metadata is good for Matlab use
+    #
+    def saveJSON(self,folder):
+        if len(self.data_file_name) == 0:
+            brl_error(" no data file name has been specified.")
+        # derive metadata file name from datafile name
+        mdfn = self.data_file_name.split('.')[0] + '_meta.JSON'
+        print('saving JSON metada as '+mdfn)
+        fdmd = open(mdfn,'w')
+        endlinechar = ','
+        #  prefix
+        print('{',file=fdmd)
+        L = len(self.d.keys())
+        ctr = 0
+        for k in self.d.keys():
+            ctr += 1
+            if ctr == L:  # no comma at end of the last of the key/value pairs
+                endlinechar = ''
+            print('    "{0:20}" : "{1:}" {2:}'.format(k, str(self.d[k]), endlinechar),file=fdmd)
+        # postfix
+        print('}',file=fdmd)
+        fdmd.close()
+
     # this reads in the metadata from a file (which might include comments)
     #  Note that dictionary will still contain string values.  e.g. Lists must
     #  be parsed, ints must be cast etc. 
@@ -198,9 +223,8 @@ class metadata:
         n2 = n2[0]
         
         smart_query(self.d,'Initials', msg='Your Initials',example=n1+n2)
-        smart_query(self.d,'OpenTime', msg='Creation Date:', example= '07-March-2017')
-     
-        smart_query(self.d,'FileType', example='.csv or .json',valids=vis.validfiletypes)
+     #   smart_query(self.d,'OpenTime', msg='Creation Date:', example= '07-March-2017')
+     #   smart_query(self.d,'FileType', example='.csv or .json',valids=vis.validfiletypes)
         smart_query(self.d,'TestType', example='single or longterm',valids=vis.validtesttypes)
         
 
@@ -307,7 +331,10 @@ class datafile:
     
     def write_metadata(self):
         self.metadata.save(self.folder)  # save into same folder as data
-        
+
+    def write_JSONmetadata(self):
+        self.metadata.saveJSON(self.folder)  # save into same folder as data
+
     def validate(self): 
         vis = validinputs()
         valid = True

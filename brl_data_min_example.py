@@ -57,6 +57,6 @@ df1.open()  # let's open the file (default is for writing)
 for i,d in enumerate(d1):
     row = [d, d2[i], d3[i], d4[i]]
     df1.write(row)
-
+df1.metadata.saveJSON(df1.folder)
 df1.close()   # all done
 
