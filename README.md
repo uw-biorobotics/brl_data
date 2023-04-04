@@ -3,12 +3,12 @@
 ## Features
 * New: 3-Apr-23:   You can also save your metadata in JSON format.  Example:
 
-'''datafile = brl_data(xx,yy,zz)
+```datafile = brl_data(xx,yy,zz)
 ...  create your data ...
 datafile.write(folder)
 datafile.metadata.saveJSON()
 datafile.close()
-'''
+```
 
 *  Generates consistent, unique, and informative file names -- no more collisions!
  File names contain the creation date and a unique hash. 
