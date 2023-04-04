@@ -3,7 +3,8 @@
 ## Features
 * New: 3-Apr-23:   You can also save your metadata in JSON format.  Example:
 
-```datafile = brl_data(xx,yy,zz)
+```
+datafile = brl_data(xx,yy,zz)
 ...  create your data ...
 datafile.write(folder)
 datafile.metadata.saveJSON()
