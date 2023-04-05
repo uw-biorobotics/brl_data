@@ -159,10 +159,13 @@ class TestNonUImethods(ut.TestCase):
     #   Test metadatafile class
     #
 
+    #  test the old ASCII metadata I/O
     def test_metadata_rw(self):
         testDeclare()
         mdd = {'test1':'val1','test2':'val2','test3':'val3'}
-        
+        mdd['Names'] = ['name1','name2','Name3', 'name4']
+        mdd['Ncols'] = len(mdd['Names'])
+
         mdo1 = bd.metadata()
         mdo2 = bd.metadata()
         mdo1.data_file_name = 'metadata_test_file.meta'
@@ -177,6 +180,35 @@ class TestNonUImethods(ut.TestCase):
         mdo2.read()  # read it into a new metadata object
         
         assert mdo1.d == mdo2.d,  'metadata_rw_test   FAIL'
+
+
+
+    #  test the new json metadata I/O
+    def test_metadata_json_rw(self):
+        testDeclare()
+        mdd = {'test1':'val1','test2':'val2','test3':'val3'}
+        mdd['Names'] = ['name1','name2','Name3', 'name4']
+        mdd['Ncols'] = len(mdd['Names'])
+
+        mdo  = bd.metadata()  # source MD
+        mdo2 = bd.metadata()  # save via self.saveJSON(folder)
+        mdo3 = bd.metadata()  # save via self.save(folder, MDjson=True)
+        mdo.data_file_name  = 'metadata_test_file_meta.json'
+        mdo2.data_file_name = 'metadata_test_file_meta.json'
+        mdo3.data_file_name = 'metadata_test_file_meta.json'  # we're not going to read or write it tho
+
+        # load up values in source md
+        for k in mdd.keys():
+            mdo.d[k] = mdd[k]
+
+        #mdo.saveJSON('')    # write out a metadata file (method 1)
+        #mdo2.read(MDjson=True)
+        mdo.save('',MDjson=True)  # write out a metadata file (jason.dump)
+        mdo3.read(MDjson=True)
+
+        #assert mdo.d == mdo2.d,  'metadata_json_rw_test (saveJSON(folder))  FAIL'
+        assert mdo.d == mdo3.d,  'metadata_json_rw_test (save(folder,MDjson=True))  FAIL'
+
 
     @patch.object(bd.metadata, 'get_user_basics',patch_test_get_user_basics) 
     def test_metadata_getuser(self):
@@ -193,10 +225,8 @@ class TestNonUImethods(ut.TestCase):
     def test_readMetaFile(self):
         testDeclare()
         df3 = bd.datafile('testfile','BH','single')
-        md = df3.read_oldmetadata(tname='readMetaFile_test_file.meta')
-        t = md.d['Names'].replace('[','').replace(']','')
-        nameslist = t.split(',')
-        assert len(nameslist) == int(md.d['Ncols'])
+        md = df3.read_oldmetadata(tname='metadata_test_file')
+        assert len(md.d['Names']) == int(md.d['Ncols'])
         print(md)
         return md
 

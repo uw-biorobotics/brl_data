@@ -29,6 +29,11 @@ ALWAYS = 2
 #   create a new commit for the code and add it to the metadata.
 BRL_auto_git_commit = ASK
 
+#  metadata format:
+#  True = Always save metadata as json object
+#  False = old style plain ascii key/value pairs
+BRL_json_metadata = True
+
 ######################   Utilities
 
 ############# create a simplistic n-char UUID
@@ -135,14 +140,18 @@ class metadata:
         self.data_file_name = name
 
     # write out metadata (OVERWRITE old metadata)
-    def save(self,folder,MDjson=False):
+    def save(self,folder,MDjson=BRL_json_metadata):
         if len(self.data_file_name) == 0:
             brl_error(" no data file name has been specified.")
 
         if MDjson:  # JSON metadata
             mdfn = self.data_file_name.split('.')[0] + '_meta.json'
-            print('saving metada as json: '+mdfn+' (method 2)')
+            print('metadata.save: about to replace: ', mdfn)
+            mdfn = mdfn.replace('meta_meta','meta')  # glitch on append mode
+            print('metadata.save: saving metada as json: '+mdfn+' (method 2)')
             fdmd = open(mdfn,'w')
+            #json doesn't like python <type>!
+
             json.dump(self.d,fdmd,indent=3)
             fdmd.close()
 
@@ -159,40 +168,42 @@ class metadata:
     # write out metadata as JSON (OVERWRITE old metadata json file)
     #   JSON metadata is good for Matlab use
     #
-    def saveJSON(self,folder):
-        if len(self.data_file_name) == 0:
-            brl_error(" no data file name has been specified.")
-        # derive metadata file name from datafile name
-        mdfn = self.data_file_name.split('.')[0] + '_meta.json'
-        print('saving JSON metada as '+mdfn)
-        fdmd = open(mdfn,'w')
-        print('saving metada as json: '+mdfn+' (method 1)')
-        endlinechar = ','
-        #  prefix
-        print('{',file=fdmd)
-        L = len(self.d.keys())
-        ctr = 0
-        for k in self.d.keys():
-            ctr += 1
-            if ctr == L:  # no comma at end of the last of the key/value pairs
-                endlinechar = ''
-            print('    "{0:}" : "{1:}" {2:}'.format(k, str(self.d[k]), endlinechar),file=fdmd)
-        # postfix
-        print('}',file=fdmd)
-        fdmd.close()
+    #def saveJSON(self,folder):
+        #if len(self.data_file_name) == 0:
+            #brl_error(" no data file name has been specified.")
+        ## derive metadata file name from datafile name
+        #mdfn = self.data_file_name.split('.')[0] + '_meta.json'
+        #print('saving JSON metada as '+mdfn)
+        #fdmd = open(mdfn,'w')
+        #print('saving metada as json: '+mdfn+' (method 1)')
+        #endlinechar = ','
+        ##  prefix
+        #print('{',file=fdmd)
+        #L = len(self.d.keys())
+        #ctr = 0
+        #for k in self.d.keys():
+            #ctr += 1
+            #if ctr == L:  # no comma at end of the last of the key/value pairs
+                #endlinechar = ''
+            #print('    "{0:}" : "{1:}" {2:}'.format(k, str(self.d[k]), endlinechar),file=fdmd)
+        ## postfix
+        #print('}',file=fdmd)
+        #fdmd.close()
 
     # this reads in the metadata from a file (which might include comments)
     #  Note that dictionary will still contain string values.  e.g. Lists must
     #  be parsed, ints must be cast etc. 
     #
     #  sometimes the metadata file might be missing but we want to be robust to that
-    def read(self, MDjson=False):
+    def read(self, MDjson=BRL_json_metadata):
         if MDjson:
-            mfn = self.data_file_name.split('.')[0] + '_meta.JSON'
+            mfn = self.data_file_name.split('.')[0] + '_meta.json'
         else:
             mfn = self.data_file_name.split('.')[0] + '.meta'
+        mfn = mfn.replace('meta_meta', 'meta') # correct append mode glitch
         fdmd = False
         try:
+            print('metadata.read: Opening: ', mfn)
             fdmd = open(mfn,'r')
         except:
             brl_error("Can't open metadata file: [{:}]".format(mfn),fatal=False)
@@ -221,16 +232,22 @@ class metadata:
                         w2 = w2.strip()
                         self.d[w1] = w2.replace('"','')
                 fdmd.close()
+                # polish the data
+                t = self.d['Names'].replace('[','').replace(']','')
+                nameslist = t.split(',')
                 return True
             else:
                 return False
-        
+        print('TESTING: ')
+        print(self.d)
+
+
     def get_user_basics(self): 
         vis = validinputs()
         print('\nPlease enter basic information for the metadata you would like to create:')
         smart_query(self.d,'Ncols',msg='How many colums of data?', example=3) # str type for everything!
         smart_query(self.d,'Names',msg='Column names (as list [...]):', example=['col 1', 'col 2', 'col 3'])
-        smart_query(self.d,'Types',msg='Column Types (as list [...]):', example=[ type(1), type(1), type(1)])
+        smart_query(self.d,'Types',msg='Column Types (as list [...]):', example=[ str(type(1)), str(type(1)),str(type(1)),str(type(1)),]) # must convert types to strings (per json pkg)
         smart_query(self.d,'Description',msg='...  description ...')
         smart_query(self.d,'Notes',msg='Notes: (...):', example='...some notes...')
         smart_query(self.d,'GitLatestCommit',example='Not Recorded')        

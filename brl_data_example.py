@@ -71,8 +71,8 @@ print('example: datafile name: ',df1.name)
 
 ##  Now lets set the metadata for this datafile (but this can be done after saving data, right before close()
 col_names = ['TagNumber', 'Voltage', 'Temperature', 'Pressure' ]
-int_type = type(5)
-float_type = type(3.14159)
+int_type = str(type(5))            # these have to be strings b/c json can't serialize types(!)
+float_type = str(type(3.14159))
 col_types = [int_type, float_type, float_type, float_type]
 col_comments = [
     'tag number read with model 2160 bar code scanner',
