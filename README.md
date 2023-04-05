@@ -2,15 +2,8 @@
 
 ## Features
 
-* New: 3-Apr-23:   You can also save your  metadata in JSON format.  Example:
-
-```
-datafile = brl_data(xx,yy,zz)
-...  create your data ...
-datafile.write(folder)
-datafile.metadata.saveJSON(folder)
-datafile.close()
-```
+* New: 5-Apr-23 (all tests passing):   `json` format is now standard for the meta files by default.
+To stay with the old ASCII format, set `BRL_json_metadata = False` in top of brl_data.py.
 
   There is a new utility file `brl_convert_metadata.py` which will convert your old .meta files to additional `_meta.json` files.
 
