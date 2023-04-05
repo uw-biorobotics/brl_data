@@ -8,11 +8,11 @@
 datafile = brl_data(xx,yy,zz)
 ...  create your data ...
 datafile.write(folder)
-datafile.metadata.saveJSON()
+datafile.metadata.saveJSON(folder)
 datafile.close()
 ```
 
-* There is a new utility file `brl_convert_metadata.py` which will convert your old .meta files to additional `_meta.JSON` files. 
+  There is a new utility file `brl_convert_metadata.py` which will convert your old .meta files to additional `_meta.json` files.
 
 * Generates consistent, unique, and informative file names -- no more collisions!
   File names contain the creation date and a unique hash. 
@@ -37,3 +37,6 @@ datafile.close()
 * brl_data_min_ example.py   A minimal very simple example that writes out data. 
 
 * brl_data_example.py        An example which uses more features.
+
+* brl_convert_metadata.py    Convert all or some of your `.meta` files to `_meta.json` files.
+

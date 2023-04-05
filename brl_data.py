@@ -135,16 +135,25 @@ class metadata:
         self.data_file_name = name
 
     # write out metadata (OVERWRITE old metadata)
-    def save(self,folder):
+    def save(self,folder,MDjson=False):
         if len(self.data_file_name) == 0:
             brl_error(" no data file name has been specified.")
-        # derive metadata file name from datafile name
-        mdfn = self.data_file_name.split('.')[0] + '.meta'
-        print('saving metada as '+mdfn)
-        fdmd = open(mdfn,'w')
-        for k in self.d.keys():
-            print('{0:20} "{1:}"'.format(k, str(self.d[k])),file=fdmd)
-        fdmd.close()
+
+        if MDjson:  # JSON metadata
+            mdfn = self.data_file_name.split('.')[0] + '_meta.json'
+            print('saving metada as json: '+mdfn+' (method 2)')
+            fdmd = open(mdfn,'w')
+            json.dump(self.d,fdmd,indent=3)
+            fdmd.close()
+
+        else:   # original ASCII format
+            # derive metadata file name from datafile name
+            mdfn = self.data_file_name.split('.')[0] + '.meta'
+            print('saving metada as '+mdfn+' (ASCII)')
+            fdmd = open(mdfn,'w')
+            for k in self.d.keys():
+                print('{0:20} "{1:}"'.format(k, str(self.d[k])),file=fdmd)
+            fdmd.close()
 
 
     # write out metadata as JSON (OVERWRITE old metadata json file)
@@ -154,9 +163,10 @@ class metadata:
         if len(self.data_file_name) == 0:
             brl_error(" no data file name has been specified.")
         # derive metadata file name from datafile name
-        mdfn = self.data_file_name.split('.')[0] + '_meta.JSON'
+        mdfn = self.data_file_name.split('.')[0] + '_meta.json'
         print('saving JSON metada as '+mdfn)
         fdmd = open(mdfn,'w')
+        print('saving metada as json: '+mdfn+' (method 1)')
         endlinechar = ','
         #  prefix
         print('{',file=fdmd)
@@ -166,7 +176,7 @@ class metadata:
             ctr += 1
             if ctr == L:  # no comma at end of the last of the key/value pairs
                 endlinechar = ''
-            print('    "{0:20}" : "{1:}" {2:}'.format(k, str(self.d[k]), endlinechar),file=fdmd)
+            print('    "{0:}" : "{1:}" {2:}'.format(k, str(self.d[k]), endlinechar),file=fdmd)
         # postfix
         print('}',file=fdmd)
         fdmd.close()
@@ -176,35 +186,44 @@ class metadata:
     #  be parsed, ints must be cast etc. 
     #
     #  sometimes the metadata file might be missing but we want to be robust to that
-    def read(self):
-        mfn = self.data_file_name.split('.')[0] + '.meta'
+    def read(self, MDjson=False):
+        if MDjson:
+            mfn = self.data_file_name.split('.')[0] + '_meta.JSON'
+        else:
+            mfn = self.data_file_name.split('.')[0] + '.meta'
         fdmd = False
         try:
             fdmd = open(mfn,'r')
         except:
             brl_error("Can't open metadata file: [{:}]".format(mfn),fatal=False)
-        if fdmd:
-            #print('reading metadata from '+mfn)
-            for line in fdmd:
-                if '#' in line:
-                    l1, l2 = line.split('#')
-                else:
-                    l1 = line
-                l1 = l1.strip()
-                if len(l1)>0:
-                    #print('MD file line: ', l1)
-                    try:
-                        w1, w2 = l1.split(' ',1)  # white space split
-                    except:
-                        w1 = l1
-                        w2 = ''
-                    w1 = w1.strip()
-                    w2 = w2.strip()
-                    self.d[w1] = w2.replace('"','')
+
+        if MDjson:  # JSON formatted metatdata.
+            self.d = json.load(fdmd)
             fdmd.close()
-            return True
-        else:
-            return False 
+
+        else:    # plain ASCII format
+            if fdmd:
+                #print('reading metadata from '+mfn)
+                for line in fdmd:
+                    if '#' in line:
+                        l1, l2 = line.split('#')
+                    else:
+                        l1 = line
+                    l1 = l1.strip()
+                    if len(l1)>0:
+                        #print('MD file line: ', l1)
+                        try:
+                            w1, w2 = l1.split(' ',1)  # white space split
+                        except:
+                            w1 = l1
+                            w2 = ''
+                        w1 = w1.strip()
+                        w2 = w2.strip()
+                        self.d[w1] = w2.replace('"','')
+                fdmd.close()
+                return True
+            else:
+                return False
         
     def get_user_basics(self): 
         vis = validinputs()
@@ -536,6 +555,9 @@ def get_latest_commit(folder='no folder'):
 #  Store setups for experiments
 #    pfname   str   parameter file name
 #
+#    Parmeter files are simple key-value pairs
+#    You can make up any keys you want.
+#    '#' can be used to put comments in your paramfiles
 #
 
 class param_file:
