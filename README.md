@@ -2,6 +2,8 @@
 
 ## Features
 
+* New: 23-Jun-23:  tried to suport "pwd" on windows with "cd" - runs on linux but needs
+windows testing.  There could be other windows problems.
 * New: 23-Jun-23:  Now can open a datafile for reading ('.csv' only). (all tests passing)
 ```
 df = bd.datafile('', '','')  # 3 empty args needed
