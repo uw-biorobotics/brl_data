@@ -79,10 +79,9 @@ class TestNonUImethods(ut.TestCase):
         #    parameter datafile type 
         df1 = bd.datafile('testingFile','BH','single')
         df1.set_folders('','')     # use the same folder
-        ##  note if the file is new, 'a' and 'w' are equivalent.
         #
         #   .open will call get_user_basics()
-        df1.open('a')  # 'w' for fresh start, 'a' for append mode
+        df1.open('w')  # 'w' for fresh start, 'a' for append mode
         df1.dataN = 4  # number of variables. (see also metadata['Ncols'] -- oops!)
         dtest = [3,4,5,6]  # some made up data 
         df1.write(dtest)    # write a row

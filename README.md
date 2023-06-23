@@ -2,6 +2,19 @@
 
 ## Features
 
+* New: 23-Jun-23:  Now can open a datafile for reading ('.csv' only). (all tests passing)
+```
+df = bd.datafile('', '','')  # 3 empty args needed
+df.set_folders('','')        # set folders as appropriate
+df.open('r',tname=fname)     # fname in string form
+```
+  - datafile now exposes an attribute `reader` (no parens) which is an iterator for the data rows. Metadata
+  is automatically read in as well.
+```
+for row in df.reader:
+    print (row)              # each row is a vector of values from one line of .csv file
+```
+
 * New: 5-Apr-23 (all tests passing):   `json` format is now standard for the meta files by default.
 To stay with the old ASCII format, set `BRL_json_metadata = False` in top of brl_data.py.
 

@@ -371,22 +371,23 @@ class datafile:
     def write_JSONmetadata(self):
         self.metadata.saveJSON(self.folder)  # save into same folder as data
 
-    def validate(self): 
+    def validate(self):
         vis = validinputs()
         valid = True
-        if self.initials == '':
-            brl_error('missing initials for filename',fatal=False)
-            valid = False
-        if not self.ttype in vis.validtesttypes:
-            brl_error('test type {:} is unknown in {:}'.format(self.ttype,vis.validtesttypes),fatal=False)
-            valid = False
-        if type(self.
-                descrip) is not type('a string') or self.descrip == '':
-            brl_error('invalid description for filename',fatal=False)
-            valid = False
-        for k in self.metadata.d.keys():
-            if type(k) != type('string'):
-                brl_error('metadata key [{:}] is not a string'.format(k))
+        print('df.validate: Validating: ',self.name)
+        if not( len(self.name) > 0 and os.path.exists(self.name)): # skip if reading or appending exiting file
+            if self.initials == '':
+                brl_error('missing initials for filename',fatal=False)
+                valid = False
+            if not self.ttype in vis.validtesttypes:
+                brl_error('test type {:} is unknown in {:}'.format(self.ttype,vis.validtesttypes),fatal=False)
+                valid = False
+            if type(self.descrip) is not type('a string') or self.descrip == '':
+                brl_error('invalid description for filename',fatal=False)
+                valid = False
+            for k in self.metadata.d.keys():
+                if type(k) != type('string'):
+                    brl_error('metadata key [{:}] is not a string'.format(k))
         return valid
             
     def request_user_data(self):
@@ -404,14 +405,19 @@ class datafile:
     #   before calling open. or use tname= parameter
     def open(self,mode='w',tname=None):
         vis = validinputs()
+        #print('opening: ', tname, ' in ', vis.validfiletypes)
+        if self.ftype not in vis.validfiletypes:
+                brl_error('trying to open unknown file type,'+self.ftype+', must be '+str(vis.validfiletypes))
         if not self.setFoldersFlag:
             brl_error('tried to open a datafile without calling set_folders() first.')
         if tname != None:
+            self.name = tname
             if mode == 'w' and os.path.exists(tname):
                 brl_error('Attempting to overwrite an existing file ('+tname+') dont you want to append?)')
-            self.name = tname
+            if mode == 'r' and not os.path.exists(tname):
+                brl_error('Attempting to read a non-existing file ('+tname+')')
         if self.name == None:
-            brl_error('output file name has not been set')
+            brl_error('file name has not been set')
         if not self.validate():
             self.request_user_data()
         self.metadata.d['OpenTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
@@ -424,8 +430,18 @@ class datafile:
             if commit_data != '':
                 self.metadata.d['GitLatestCommit'] = commit_data
             self.fd = open(self.name,mode)
-            
+                ##############################
+            ###  set up class for data output depending on datafile type
+            if self.ftype == '.csv':
+                self.output_class = csv.writer(self.fd, delimiter=',',quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+            elif self.ftype == '.json':
+                brl_error('json data file output not yet supported')
+
         elif mode == 'a':   # append mode
+            if tname is None and self.name == '':
+                brl_error('opening in append mode without a filename')
+            if self.name == '':
+                self.name = self.tname
             ##
             #  Check if source code is modified and optionally automatically commit it
             commit_data = self.check_code_version()
@@ -447,23 +463,32 @@ class datafile:
                     brl_error('Appending to a file with DIFFERENT column names: {:} vs {:}'.format(self.metadata.d['Names'],tmd['Names']))
                 if self.metadata.d['Types'] != tmd['Types']:
                     brl_error('Appending to a file with DIFFERENT column types: {:} vs {:}'.format(self.metadata.d['Types'],tmd['Types']))
-                            
-                 
+            else:
+                brl_error('Attempting to append to a non-existent file: '+self.name)
             ###########################################
             ## finally, open the file in append mode
             self.fd = open(self.name,'a')
-            
+            ###  set up class for data output depending on datafile type
+            if self.ftype == '.csv':
+                self.output_class = csv.writer(self.fd, delimiter=',',quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+            elif self.ftype == '.json':
+                brl_error('json data file output append not yet supported')
+
+        elif mode == 'r':  # read in a datafile's data and metadata
+            if not os.path.exists(self.name):
+                brl_error('Attempting to read from a non-existent file: '+self.name)
+                # set up a reader
+            ###  set up class for data output depending on datafile type
+            if self.ftype == '.csv':
+                self.fd = open(self.name, 'r',newline='')
+                self.reader = csv.reader(self.fd, delimiter=',',quotechar='"')
+            elif self.ftype == '.json':
+                brl_error('json data file reading not yet supported')
+            else:
+                brl_error('Attempting to read a file that does not exist: ' + self.name)
         else:
-            brl_error('illegal log file mode (must be "a" or "w"): {:}'.format(mode))
-        ##############################
-        ###  set up class for data output depending on datafile type
-        if self.ftype == '.csv':
-            self.output_class = csv.writer(self.fd, delimiter=',',quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-        elif self.ftype == '.json':
-            brl_error('json data file output not yet supported')
-        else:
-            brl_error('trying to open unknown file type,'+self.ftype+', must be '+str(vis.validfiletypes))
-            
+            brl_error('illegal brl_data file mode (must be "a", "r", or "w"): {:}'.format(mode))
+
     def close(self):
         if self.fd == None:
             brl_error('Trying to close a datafile that has not been opened yet')
@@ -494,11 +519,14 @@ class datafile:
         else:
             brl_error('unknown file type: '+self.ftype)
             
-    def read(self,data):  # maybe also use for reading configurations? json??
+    def read_setup(self):  # maybe also use for reading configurations? json??
         ##
         ##  TBD a method for reading from our data files which uses
         ##    the .meta files 
         ##
+        if self.ftype == '.csv':
+            self.readdata_class = csv.reader(self.fd, delimiter=',',quotechar='"')
+
         pass
         
     def check_code_version(self):
