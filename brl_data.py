@@ -486,6 +486,8 @@ class datafile:
                 brl_error('json data file reading not yet supported')
             else:
                 brl_error('Attempting to read a file that does not exist: ' + self.name)
+            # get the metadata about the file we are reading
+            self.metadata = self.read_oldmetadata()
         else:
             brl_error('illegal brl_data file mode (must be "a", "r", or "w"): {:}'.format(mode))
 
