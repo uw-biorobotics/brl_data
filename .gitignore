@@ -1,0 +1,6 @@
+
+#  data files and metdata
+*.csv
+*.json
+*.meta
+

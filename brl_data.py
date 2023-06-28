@@ -113,6 +113,20 @@ def brl_error(msg,fatal=True):
     else:
         return
 
+##################################################################
+#
+#  some utilities for type conversion (see metadata.polish)
+#
+def null_conversion(x): # for str to str(!)
+    if type(x) != type('hello'):
+        brl_error('illegal type conversion')
+    return x
+def int_conv(x):
+    return int(x)
+def float_conv(x):
+    return float(x)
+
+
 class validinputs:
     def __init__(self):
         self.validtesttypes = ['simulation','single', 'longterm']  # examples only
@@ -133,6 +147,10 @@ class metadata:
         self.d = {}  # the actual metadata 
         self.data_file_name = '' 
         self.d['Dependencies'] = str([ sys.argv[0],'brl_data.py','icarus.py' ])
+        self.polished = False # after reading md, convert types
+         # functions to convert from strings to correct types
+         #   these are set in metadata.polish()
+        self.row_type_funcs = []
     
     def set_data_file_name(self,name):
         if (not '.csv' in name):
@@ -145,50 +163,66 @@ class metadata:
             brl_error(" no data file name has been specified.")
 
         if MDjson:  # JSON metadata
-            mdfn = self.data_file_name.split('.')[0] + '_meta.json'
-            print('metadata.save: about to replace: ', mdfn)
-            mdfn = mdfn.replace('meta_meta','meta')  # glitch on append mode
-            print('metadata.save: saving metada as json: '+mdfn+' (method 2)')
-            fdmd = open(mdfn,'w')
+            metadata_fname = self.data_file_name.split('.')[0] + '_meta.json'
+            print('metadata.save: about to replace: ', metadata_fname)
+            metadata_fname = metadata_fname.replace('meta_meta','meta')  # glitch on append mode
+            print('metadata.save: saving metadata as json: '+metadata_fname+' (method 2)')
+            metadata_fd = open(metadata_fname,'w')
             #json doesn't like python <type>!
 
-            json.dump(self.d,fdmd,indent=3)
-            fdmd.close()
+            json.dump(self.d,metadata_fd,indent=3)
+            metadata_fd.close()
 
         else:   # original ASCII format
             # derive metadata file name from datafile name
-            mdfn = self.data_file_name.split('.')[0] + '.meta'
-            print('saving metada as '+mdfn+' (ASCII)')
-            fdmd = open(mdfn,'w')
+            metadata_fname = self.data_file_name.split('.')[0] + '.meta'
+            print('saving metadata as '+metadata_fname+' (ASCII)')
+            metadata_fd = open(metadata_fname,'w')
             for k in self.d.keys():
-                print('{0:20} "{1:}"'.format(k, str(self.d[k])),file=fdmd)
-            fdmd.close()
+                print('{0:20} "{1:}"'.format(k, str(self.d[k])),file=metadata_fd)
+            metadata_fd.close()
 
+    def polish(self):
+        # intelligently read in metadata
+        if not self.polished:
+            #1) convert string rep of names list to real list:
+            t = self.d['Names'].replace('[','').replace(']','')
+            nameslist = t.split(',')
+            self.d['Names'] = nameslist  # a real list of strings instead of '[ x,y,etc]'
+            #2) assign type conversion functions to each col based on metadata:
+            ttypes = self.d['Types']
+            #"[<class 'int'>, <class 'int'>, <class 'int'>, <class 'int'>]"
+            # how it's typically saved
+            int_type = str(type(5))    # these have to be strings b/c json can't serialize types(!)
+            float_type = str(type(3.14159))
+            str_type = str(type('hello'))
+            #col_types = [ int_type, float_type, float_type, float_type]
+            #"Types": "[<class 'int'>, <class 'int'>, <class 'int'>, <class 'int'>]",
+            t = self.d['Types'].replace('[','')
+            t = t.replace(']','')
+            t = t.replace('"','')
+            ttypes = t.split(',')
+            self.row_type_funcs = []  # a set of functions to convert each data col in a row
+            for t in ttypes:
+                t = t.strip()
+                if t == int_type:
+                    self.row_type_funcs.append(int_conv)
+                if t == float_type:
+                    self.row_type_funcs.append(float_conv)
+                if t == str_type:
+                    self.row_type_funcs.append(null_conversion)
+            #3) derive proper string format tags for each col.
+            self.row_fmt_tags = []
+            for t in ttypes:
+                t=t.strip()
+                if t == int_type:
+                    self.row_fmt_tags.append('{:10d}')
+                if t == float_type:
+                    self.row_fmt_tags.append('{:10.2f}')
+                if t == str_type:
+                    self.row_fmt_tags.append('{:10}')
+        self.polished = True
 
-    # write out metadata as JSON (OVERWRITE old metadata json file)
-    #   JSON metadata is good for Matlab use
-    #
-    #def saveJSON(self,folder):
-        #if len(self.data_file_name) == 0:
-            #brl_error(" no data file name has been specified.")
-        ## derive metadata file name from datafile name
-        #mdfn = self.data_file_name.split('.')[0] + '_meta.json'
-        #print('saving JSON metada as '+mdfn)
-        #fdmd = open(mdfn,'w')
-        #print('saving metada as json: '+mdfn+' (method 1)')
-        #endlinechar = ','
-        ##  prefix
-        #print('{',file=fdmd)
-        #L = len(self.d.keys())
-        #ctr = 0
-        #for k in self.d.keys():
-            #ctr += 1
-            #if ctr == L:  # no comma at end of the last of the key/value pairs
-                #endlinechar = ''
-            #print('    "{0:}" : "{1:}" {2:}'.format(k, str(self.d[k]), endlinechar),file=fdmd)
-        ## postfix
-        #print('}',file=fdmd)
-        #fdmd.close()
 
     # this reads in the metadata from a file (which might include comments)
     #  Note that dictionary will still contain string values.  e.g. Lists must
@@ -197,55 +231,50 @@ class metadata:
     #  sometimes the metadata file might be missing but we want to be robust to that
     def read(self, MDjson=BRL_json_metadata):
         if MDjson:
-            mfn = self.data_file_name.split('.')[0] + '_meta.json'
+            metadata_fname = self.data_file_name.split('.')[0] + '_meta.json'
         else:
-            mfn = self.data_file_name.split('.')[0] + '.meta'
-        mfn = mfn.replace('meta_meta', 'meta') # correct append mode glitch
-        fdmd = False
+            metadata_fname = self.data_file_name.split('.')[0] + '.meta'
+            metadata_fname = metadata_fname.replace('meta_meta', 'meta') # correct append mode glitch
+            metadata_fd = False
         try:
-            print('metadata.read: Opening: ', mfn)
-            fdmd = open(mfn,'r')
+            print('metadata.read: Opening: ', metadata_fname)
+            metadata_fd = open(metadata_fname,'r')
         except:
-            brl_error("Can't open metadata file: [{:}]".format(mfn),fatal=False)
+            brl_error("Can't open metadata file: [{:}]".format(metadata_fname),fatal=False)
 
         if MDjson:  # JSON formatted metatdata.
-            self.d = json.load(fdmd)
-            fdmd.close()
+            self.d = json.load(metadata_fd)
+            metadata_fd.close()
+            self.polish()
 
-        else:    # plain ASCII format
-            if fdmd:
-                #print('reading metadata from '+mfn)
-                for line in fdmd:
-                    if '#' in line:
-                        l1, l2 = line.split('#')
-                    else:
-                        l1 = line
-                    l1 = l1.strip()
-                    if len(l1)>0:
-                        #print('MD file line: ', l1)
-                        try:
-                            w1, w2 = l1.split(' ',1)  # white space split
-                        except:
-                            w1 = l1
-                            w2 = ''
-                        w1 = w1.strip()
-                        w2 = w2.strip()
-                        self.d[w1] = w2.replace('"','')
-                fdmd.close()
-                # polish the data
-                t = self.d['Names'].replace('[','').replace(']','')
-                nameslist = t.split(',')
-                return True
-            else:
-                return False
-        print('TESTING: ')
-        print(self.d)
+        else:    # plain ASCII format (deprecated)
+            #print('reading metadata from '+metadata_fname)
+            for line in metadata_fd:
+                if '#' in line:
+                    l1, l2 = line.split('#')
+                else:
+                    l1 = line
+                l1 = l1.strip()
+                if len(l1)>0:
+                    #print('MD file line: ', l1)
+                    try:
+                        w1, w2 = l1.split(' ',1)  # white space split
+                    except:
+                        w1 = l1
+                        w2 = ''
+                    w1 = w1.strip()
+                    w2 = w2.strip()
+                    self.d[w1] = w2.replace('"','')
+            metadata_fd.close()
+            # polish the data
+            self.polish()
+            return True
 
 
     def get_user_basics(self): 
         vis = validinputs()
         print('\nPlease enter basic information for the metadata you would like to create:')
-        smart_query(self.d,'Ncols',msg='How many colums of data?', example=3) # str type for everything!
+        smart_query(self.d,'Ncols',msg='How many columns of data?', example=3) # str type for everything!
         smart_query(self.d,'Names',msg='Column names (as list [...]):', example=['col 1', 'col 2', 'col 3'])
         smart_query(self.d,'Types',msg='Column Types (as list [...]):', example=[ str(type(1)), str(type(1)),str(type(1)),str(type(1)),]) # must convert types to strings (per json pkg)
         smart_query(self.d,'Description',msg='...  description ...')
@@ -266,13 +295,14 @@ class metadata:
 
     def __repr__(self):
         str = '----------------------------------------------\n' 
-        str += '{:25}{:}\n'.format('Experiment Metadata: ','') 
+        str += '{:25}{:}\n'.format('Experiment Metadata: ', self.data_file_name.replace('.csv',''))
         str += '{:25}{:}\n'.format('Dictionary:','')
         for k in self.d.keys():
             str += '       {:25}{:} [{:}]\n'.format(k,self.d[k],type(self.d[k])) 
-        str += '----------------------------------------------\n'
+        str += '\nmetadata polished: {:}'.format(self.polished)
+        str += '\n----------------------------------------------\n'
         return str
-     
+
 #
 #          Data
 #
@@ -342,7 +372,7 @@ class datafile:
             brl_error('problem generating filename')
         if '.' in self.name.replace(self.ftype,''):
             brl_error(' You cannot have a period (.) in base filename: '+ self.name.replace(self.ftype,''))
-        print('Generated filename: '+self.name)
+        #print('Generated filename: '+self.name)
         
         
     def set_metadata(self,names, types, notes):
@@ -374,7 +404,7 @@ class datafile:
     def validate(self):
         vis = validinputs()
         valid = True
-        print('df.validate: Validating: ',self.name)
+        #print('df.validate: Validating: ',self.name)
         if not( len(self.name) > 0 and os.path.exists(self.name)): # skip if reading or appending exiting file
             if self.initials == '':
                 brl_error('missing initials for filename',fatal=False)
@@ -477,7 +507,7 @@ class datafile:
         elif mode == 'r':  # read in a datafile's data and metadata
             if not os.path.exists(self.name):
                 brl_error('Attempting to read from a non-existent file: '+self.name)
-                # set up a reader
+            # set up a reader
             ###  set up class for data output depending on datafile type
             if self.ftype == '.csv':
                 self.fd = open(self.name, 'r',newline='')
@@ -488,8 +518,37 @@ class datafile:
                 brl_error('Attempting to read a file that does not exist: ' + self.name)
             # get the metadata about the file we are reading
             self.metadata = self.read_oldmetadata()
+            self.metadata.polish()  # convert str metadata values to their types
         else:
             brl_error('illegal brl_data file mode (must be "a", "r", or "w"): {:}'.format(mode))
+
+    # convert data row from strings to correct types
+    def type_row(self,row):
+        if not self.metadata.polished:
+            print( 'len(Names), d.["Ncols"]: ',len(self.metadata.d['Names']),self.metadata.d['Ncols'])
+            brl_error('metadata.typerow: must polish() the metadata before reading')
+        for i,d in enumerate(row):
+            row[i] = self.metadata.row_type_funcs[i](d) # convert each col correctly
+        return row
+
+    # print a row with formatting based on the md.d['Types']
+    def print_row(self,row,ncc=10):
+        if not self.metadata.polished:
+            brl_error('must polish metadata before printing a row')
+        print('  ',end='')
+        row = self.type_row(row) # convert the types
+        for i,d in enumerate(row):
+            f_tag = self.metadata.row_fmt_tags[i]
+            print(f_tag.format(d), end='')
+        print('')
+    def print_header(self,ncc=10):
+        #"Names": "['d1', 'd2', 'd3', 'd4']",
+        print(' '*(ncc-1),end='')
+        if not self.metadata.polished:
+            brl_error('must polish metadata before printing a row')
+        for n in self.metadata.d['Names']:
+            print('{:10}'.format(n),end='')
+        print('')
 
     def close(self):
         if self.fd == None:
@@ -520,16 +579,6 @@ class datafile:
             ##  write to json???
         else:
             brl_error('unknown file type: '+self.ftype)
-            
-    def read_setup(self):  # maybe also use for reading configurations? json??
-        ##
-        ##  TBD a method for reading from our data files which uses
-        ##    the .meta files 
-        ##
-        if self.ftype == '.csv':
-            self.readdata_class = csv.reader(self.fd, delimiter=',',quotechar='"')
-
-        pass
         
     def check_code_version(self):
         ##
