@@ -2,6 +2,25 @@
 
 ## Features
 
+* Generates consistent, unique, and informative file names -- no more collisions!
+  File names contain the creation date and a unique hash. 
+
+* Supports a flexible and expandable dictionary of metadata saved in a separate human-readable file with 
+  the same filename root as each datafile.
+
+* Records the git commit hash of your currently running software in the metadata.    Later on you can 
+  go back to the exact code commit that generated your data (especially good for simulations).
+
+* Optionally can detect at runtime that you have changed any of your code and automatically make a new commit.
+
+* Intelligently append to existing brl_data datafiles (if for example your code runs once per day). 
+
+## News
+
+* New: 28-Jun-23:  Created example file (brl_data_read_a_file_example.py) for
+simple reading of an existing brl_data datafile.  Now uses the metadata for smart
+type conversion from .csv string data.  You can still use regular python .csv
+module if desired.
 * New: 23-Jun-23:  tried to suport "pwd" on windows with "cd" - runs on linux but needs
 windows testing.  There could be other windows problems.
 * New: 23-Jun-23:  Now can open a datafile for reading ('.csv' only). (all tests passing)
@@ -21,19 +40,6 @@ for row in df.reader:
 To stay with the old ASCII format, set `BRL_json_metadata = False` in top of brl_data.py.
 
   There is a new utility file `brl_convert_metadata.py` which will convert your old .meta files to additional `_meta.json` files.
-
-* Generates consistent, unique, and informative file names -- no more collisions!
-  File names contain the creation date and a unique hash. 
-
-* Supports a flexible and expandable dictionary of metadata saved in a separate human-readable file with 
-  the same filename root as each datafile.
-
-* Records the git commit hash of your currently running software in the metadata.    Later on you can 
-  go back to the exact code commit that generated your data (especially good for simulations).
-
-* Optionally can detect at runtime that you have changed any of your code and automatically make a new commit.
-
-* Intelligently append to existing brl_data datafiles (if for example your code runs once per day). 
 
 ## This repo includes
 

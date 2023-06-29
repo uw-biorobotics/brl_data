@@ -164,53 +164,87 @@ class metadata:
 
         if MDjson:  # JSON metadata
             metadata_fname = self.data_file_name.split('.')[0] + '_meta.json'
-            print('metadata.save: about to replace: ', metadata_fname)
+            #print('metadata.save: about to replace: ', metadata_fname)
             metadata_fname = metadata_fname.replace('meta_meta','meta')  # glitch on append mode
-            print('metadata.save: saving metadata as json: '+metadata_fname+' (method 2)')
+            #print('metadata.save: saving metadata as json: '+metadata_fname+' (method 2)')
             metadata_fd = open(metadata_fname,'w')
-            #json doesn't like python <type>!
-
             json.dump(self.d,metadata_fd,indent=3)
             metadata_fd.close()
 
         else:   # original ASCII format
             # derive metadata file name from datafile name
             metadata_fname = self.data_file_name.split('.')[0] + '.meta'
-            print('saving metadata as '+metadata_fname+' (ASCII)')
+            #print('saving metadata as '+metadata_fname+' (ASCII)')
             metadata_fd = open(metadata_fname,'w')
             for k in self.d.keys():
                 print('{0:20} "{1:}"'.format(k, str(self.d[k])),file=metadata_fd)
             metadata_fd.close()
 
-    def polish(self):
-        # intelligently read in metadata
+    def validate(self):  # metadata
+            valid = True
+            for k in self.d.keys():
+                if type(k) != type('string'):
+                    brl_error('metadata key [{:}] is not a string'.format(k),fatal=False)
+                    valid=False
+            try:
+                x = self.d['Names']
+            except:
+                brl_error('validate: metadata dictionary must have "Names" key',fatal=False)
+                valid=False
+            try:
+                x = self.d['Types']
+            except:
+                brl_error('validate: metadata dictionary must have "Types" key',fatal=False)
+                valid=False
+            return valid
+
+    def polish(self): #metadata
+        #
+        int_type = str(type(5))    # these have to be strings b/c json can't serialize types(!)
+        float_type = str(type(3.14159))
+        str_type = str(type('hello'))
+
+        # intelligently convert types from string in metadata
         if not self.polished:
             #1) convert string rep of names list to real list:
-            t = self.d['Names'].replace('[','').replace(']','')
-            nameslist = t.split(',')
-            self.d['Names'] = nameslist  # a real list of strings instead of '[ x,y,etc]'
+            if type(self.d['Names']) == type('hello'):  # string version of list was old style
+                t = self.d['Names'].replace('[','').replace(']','')
+                t = t.replace("'","")
+                nameslist = t.split(',')
+                for i,n in enumerate(nameslist):
+                    nameslist[i] = n.strip()
+                self.d['Names'] = nameslist  # a real list of strings instead of '[ x,y,etc]'
+
             #2) assign type conversion functions to each col based on metadata:
+            try:
+                x = self.d['Types']
+            except:
+                print('No Types tag????')
+                print(self)
+                brl_error('no types tag')
+
             ttypes = self.d['Types']
-            #"[<class 'int'>, <class 'int'>, <class 'int'>, <class 'int'>]"
-            # how it's typically saved
-            int_type = str(type(5))    # these have to be strings b/c json can't serialize types(!)
-            float_type = str(type(3.14159))
-            str_type = str(type('hello'))
-            #col_types = [ int_type, float_type, float_type, float_type]
-            #"Types": "[<class 'int'>, <class 'int'>, <class 'int'>, <class 'int'>]",
-            t = self.d['Types'].replace('[','')
-            t = t.replace(']','')
-            t = t.replace('"','')
-            ttypes = t.split(',')
-            self.row_type_funcs = []  # a set of functions to convert each data col in a row
+
+            # Currently d['Types'] is stored as a list of string-converted types.  Some older files
+            #  store the list converted into one big string
+            if  type(self.d['Types']) == type('hello'):  # if old one-string version,
+                t = self.d['Types'].replace('[','')
+                t = t.replace(']','')
+                t = t.replace('"','')
+                ttypes = t.split(',')
+
+            self.row_type_funcs = []  # Build a list of functions to convert each data col in a row
             for t in ttypes:
                 t = t.strip()
                 if t == int_type:
-                    self.row_type_funcs.append(int_conv)
-                if t == float_type:
+                    self.row_type_funcs.append(int_conv)  #int_conv etc defined up top.
+                elif t == float_type:
                     self.row_type_funcs.append(float_conv)
-                if t == str_type:
+                elif t == str_type:
                     self.row_type_funcs.append(null_conversion)
+                else:
+                    brl_error('metadata.polish: trying to convert an unknown type')
+
             #3) derive proper string format tags for each col.
             self.row_fmt_tags = []
             for t in ttypes:
@@ -221,7 +255,11 @@ class metadata:
                     self.row_fmt_tags.append('{:10.2f}')
                 if t == str_type:
                     self.row_fmt_tags.append('{:10}')
-        self.polished = True
+            self.polished = True
+            return
+        #print('already polished: ',self.data_file_name.replace('.csv',''))
+        return
+
 
 
     # this reads in the metadata from a file (which might include comments)
@@ -229,24 +267,27 @@ class metadata:
     #  be parsed, ints must be cast etc. 
     #
     #  sometimes the metadata file might be missing but we want to be robust to that
+    #   update June 23:  no - we are not going to be robust to a non existent md file.
     def read(self, MDjson=BRL_json_metadata):
         if MDjson:
             metadata_fname = self.data_file_name.split('.')[0] + '_meta.json'
         else:
             metadata_fname = self.data_file_name.split('.')[0] + '.meta'
-            metadata_fname = metadata_fname.replace('meta_meta', 'meta') # correct append mode glitch
             metadata_fd = False
+        # correct append mode glitch
+        metadata_fname = metadata_fname.replace('meta_meta', 'meta')
+
         try:
-            print('metadata.read: Opening: ', metadata_fname)
+            #print('metadata.read: Opening: ', metadata_fname)
             metadata_fd = open(metadata_fname,'r')
         except:
-            brl_error("Can't open metadata file: [{:}]".format(metadata_fname),fatal=False)
+            brl_error("Can't open metadata file: [{:}]".format(metadata_fname),fatal=True)
 
-        if MDjson:  # JSON formatted metatdata.
+        if MDjson:  # JSON formatted metadata.
             self.d = json.load(metadata_fd)
             metadata_fd.close()
             self.polish()
-
+            return True
         else:    # plain ASCII format (deprecated)
             #print('reading metadata from '+metadata_fname)
             for line in metadata_fd:
@@ -379,10 +420,12 @@ class datafile:
         N = len(names)
         if len(types) != N or len(notes) != N:
             brl_error('uneven metadata. do you need to make metadata into lists?')
-        self.metadata.d['Ncols'] = str(N)     # str type for everything!
-        self.metadata.d['Names'] = str(names)
-        self.metadata.d['Types'] = str(types)
-        self.metadata.d['Notes'] = str(notes)
+        for i,t in enumerate(types):
+            types[i] = str(t)    # .json can't serialize types
+        self.metadata.d['Ncols'] = N
+        self.metadata.d['Names'] = names
+        self.metadata.d['Types'] = types
+        self.metadata.d['Notes'] = notes
         self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
     
     def read_oldmetadata(self,tname=None):
@@ -398,13 +441,10 @@ class datafile:
     def write_metadata(self):
         self.metadata.save(self.folder)  # save into same folder as data
 
-    def write_JSONmetadata(self):
-        self.metadata.saveJSON(self.folder)  # save into same folder as data
-
-    def validate(self):
+    def validate(self): #datafaile
         vis = validinputs()
         valid = True
-        #print('df.validate: Validating: ',self.name)
+        print('df.validate: Validating: ',self.name)
         if not( len(self.name) > 0 and os.path.exists(self.name)): # skip if reading or appending exiting file
             if self.initials == '':
                 brl_error('missing initials for filename',fatal=False)
@@ -415,9 +455,8 @@ class datafile:
             if type(self.descrip) is not type('a string') or self.descrip == '':
                 brl_error('invalid description for filename',fatal=False)
                 valid = False
-            for k in self.metadata.d.keys():
-                if type(k) != type('string'):
-                    brl_error('metadata key [{:}] is not a string'.format(k))
+            if not self.metadata.validate():
+                valid=False
         return valid
             
     def request_user_data(self):
@@ -489,7 +528,7 @@ class datafile:
                 # now some sanity checks
                 if self.metadata.d['Ncols'] != tmd['Ncols']:
                     brl_error('Appending to a file with DIFFERENT number of columns: {:} vs {:}'.format(self.metadata.d['Ncols'],tmd['Ncols']))
-                if self.metadata.d['Names'] != tmd['Names']:
+                if str(self.metadata.d['Names']) != str(tmd['Names']):
                     brl_error('Appending to a file with DIFFERENT column names: {:} vs {:}'.format(self.metadata.d['Names'],tmd['Names']))
                 if self.metadata.d['Types'] != tmd['Types']:
                     brl_error('Appending to a file with DIFFERENT column types: {:} vs {:}'.format(self.metadata.d['Types'],tmd['Types']))
@@ -572,7 +611,7 @@ class datafile:
         if self.ftype == '.csv':
             ####   write data to csv file
             self.output_class.writerow(data)
-            self.metadata.d['Nrows'] = str(int(self.metadata.d['Nrows'])+1)
+            self.metadata.d['Nrows'] = int(self.metadata.d['Nrows'])+1
             return
         if self.ftype == '.json':
             brl_error('.json output data files not yet supported')

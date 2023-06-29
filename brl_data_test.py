@@ -91,7 +91,7 @@ class TestNonUImethods(ut.TestCase):
             
         # can set the metadata either at START or END of experiment if desired.
         df1.set_metadata(['d1','d2','d3','d4'], 
-                        #['int','int','int'],    # oops- only 3 types given need 4 (uncomment to test checking)
+                        #[type(5)]*3,    # oops- only 3 types given need 4 (uncomment to test checking)
                         [type(5)]*4,  # 
                         ['important data', 'nice to have', 'the upload latency', 'feebdack latency in (ms)'])
         #  above arguments to set_metadata are
@@ -99,9 +99,9 @@ class TestNonUImethods(ut.TestCase):
         #    col types 
         #    col comments (desecrip for each column
         df1.metadata.d['TESTING CUSTOM'] = ' custom metadata can be added.'
-        print('datafiletest: got here...')
-        assert df1.validate() == True   # this should be a valid datafile
-        print('datafiletest: validation asserted')
+        print('Initial test datafile generation')
+        print(df1.metadata)
+        assert df1.validate() == True, 'test file metadata is invalid'   # this should be a valid datafile
         df1.close()
         
         ###  Test file data input routine
@@ -137,7 +137,7 @@ class TestNonUImethods(ut.TestCase):
         #print('')
         #quit()
         
-        df3.dataN = len(df3.metadata.d['Names'].split(','))
+        df3.dataN = len(df3.metadata.d['Names'])
         for i in range(5):
             df3.write(dtest)
         df3.close()        # close the file
@@ -150,7 +150,7 @@ class TestNonUImethods(ut.TestCase):
             dtest[2] += i
             df3.write(dtest)  # additional data appended
         df3.metadata.d['CUSTOM2'] = 'should reflect Nrows = 8'
-        assert df3.metadata.d['Nrows'] == str(8)  # note all metadata are strings
+        assert df3.metadata.d['Nrows'] == 8
         df3.close()
 
 
@@ -163,6 +163,8 @@ class TestNonUImethods(ut.TestCase):
         testDeclare()
         mdd = {'test1':'val1','test2':'val2','test3':'val3'}
         mdd['Names'] = ['name1','name2','Name3', 'name4']
+        tys = str(type('hello'))
+        mdd['Types'] = [tys,tys,tys,tys]
         mdd['Ncols'] = len(mdd['Names'])
 
         mdo1 = bd.metadata()
@@ -187,23 +189,23 @@ class TestNonUImethods(ut.TestCase):
         testDeclare()
         mdd = {'test1':'val1','test2':'val2','test3':'val3'}
         mdd['Names'] = ['name1','name2','Name3', 'name4']
+        tys = str(type('hello'))
+        mdd['Types'] = [tys,tys,tys,tys]
         mdd['Ncols'] = len(mdd['Names'])
 
         mdo  = bd.metadata()  # source MD
-        mdo2 = bd.metadata()  # save via self.saveJSON(folder)
         mdo3 = bd.metadata()  # save via self.save(folder, MDjson=True)
         mdo.data_file_name  = 'metadata_test_file_meta.json'
-        mdo2.data_file_name = 'metadata_test_file_meta.json'
-        mdo3.data_file_name = 'metadata_test_file_meta.json'  # we're not going to read or write it tho
+        mdo3.data_file_name = 'metadata_test_file_meta.json'
 
         # load up values in source md
         for k in mdd.keys():
             mdo.d[k] = mdd[k]
 
-        #mdo.saveJSON('')    # write out a metadata file (method 1)
-        #mdo2.read(MDjson=True)
+        mdo.polish()
         mdo.save('',MDjson=True)  # write out a metadata file (jason.dump)
         mdo3.read(MDjson=True)
+        mdo3.polish()  # md.read includes automatic string unpacking/type conversion
 
         #assert mdo.d == mdo2.d,  'metadata_json_rw_test (saveJSON(folder))  FAIL'
         assert mdo.d == mdo3.d,  'metadata_json_rw_test (save(folder,MDjson=True))  FAIL'
@@ -225,6 +227,7 @@ class TestNonUImethods(ut.TestCase):
         testDeclare()
         df3 = bd.datafile('testfile','BH','single')
         md = df3.read_oldmetadata(tname='metadata_test_file')
+        assert md.validate(), 'Invalid metadata'
         assert len(md.d['Names']) == int(md.d['Ncols'])
         print(md)
         return md
