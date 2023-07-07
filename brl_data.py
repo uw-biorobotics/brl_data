@@ -41,7 +41,7 @@ def brl_id(n):
     u = uuid.uuid4()  # 
     u = str(u).replace('-','')
     m = int(n/2)
-    return u[0:m] + u[-m:-1]
+    return u[0:m] + u[-m-1:-1]
 
 
 ###############   Wrap the input function so it can be mocked
@@ -361,6 +361,8 @@ class datafile:
         self.ftype = '.csv'  # only .csv at this point
         self.fd = None  # file descriptor
         self.name = ''    # can override this any time
+        self.hashcode=brl_id(8)
+        self.accessmode=None  # set by self.open()
         self.folder = ''  # can direct datafiles into a folder
         self.gitrepofolder = ''   # place where current code lives
         self.output_class = None  # for example:  csv.writer()
@@ -406,8 +408,7 @@ class datafile:
         todaydate = dt.datetime.now().strftime('%Y-%m-%d')
         #https://pynative.com/python-uuid-module-to-generate-universally-unique-identifiers/
         #sm_uuid = str(uuid.uuid4())[0:7]  # just 8 chars should be enough
-        sm_uuid = brl_id(8)
-        self.name = '{:}_{:}_{:}_{:}_{:}{:}'.format(todaydate,sm_uuid, self.descrip,self.initials,self.ttype,self.ftype)
+        self.name = '{:}_{:}_{:}_{:}_{:}{:}'.format(todaydate,self.hashcode, self.descrip,self.initials,self.ttype,self.ftype)
         self.add_folder_to_fname()
         if type(self.name) != type('a string'):
             brl_error('problem generating filename')
@@ -474,6 +475,7 @@ class datafile:
     #   before calling open. or use tname= parameter
     def open(self,mode='w',tname=None):
         vis = validinputs()
+        self.accessmode=mode
         #print('opening: ', tname, ' in ', vis.validfiletypes)
         if self.ftype not in vis.validfiletypes:
                 brl_error('trying to open unknown file type,'+self.ftype+', must be '+str(vis.validfiletypes))
@@ -491,7 +493,7 @@ class datafile:
             self.request_user_data()
         self.metadata.d['OpenTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
         self.metadata.d['Nrows'] = 0
-        if mode == 'w':   # write mode
+        if self.accessmode == 'w':   # write mode
             ##
             #  Check if source code is modified and optionally automatically commit it
             # find the commit data
@@ -506,7 +508,7 @@ class datafile:
             elif self.ftype == '.json':
                 brl_error('json data file output not yet supported')
 
-        elif mode == 'a':   # append mode
+        elif self.accessmode == 'a':   # append mode
             if tname is None and self.name == '':
                 brl_error('opening in append mode without a filename')
             if self.name == '':
@@ -543,7 +545,7 @@ class datafile:
             elif self.ftype == '.json':
                 brl_error('json data file output append not yet supported')
 
-        elif mode == 'r':  # read in a datafile's data and metadata
+        elif self.accessmode == 'r':  # read in a datafile's data and metadata
             if not os.path.exists(self.name):
                 brl_error('Attempting to read from a non-existent file: '+self.name)
             # set up a reader
@@ -552,7 +554,7 @@ class datafile:
                 self.fd = open(self.name, 'r',newline='')
                 self.reader = csv.reader(self.fd, delimiter=',',quotechar='"')
             elif self.ftype == '.json':
-                brl_error('json data file reading not yet supported')
+                brl_error('json data file reading not yet supported (only for metadata)')
             else:
                 brl_error('Attempting to read a file that does not exist: ' + self.name)
             # get the metadata about the file we are reading
@@ -593,13 +595,14 @@ class datafile:
         if self.fd == None:
             brl_error('Trying to close a datafile that has not been opened yet')
         else:
-            self.fd.close()
-            # now output the metadata
-            self.metadata.d['CloseTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
-            #
-            #  Save the metadata at very end
-            #
-            self.write_metadata()
+            self.fd.close()  # close the datafile
+            if self.accessmode in ['w','a']:
+                # now output the new metadata if writing or appending only
+                self.metadata.d['CloseTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
+                #
+                #  Save the metadata at very end
+                #
+                self.write_metadata()
             
     def write(self,data):  # TODO: figure out a way to standardize the "data" argument
         #  data:  a list of values to add to the currently open output file as one row.
