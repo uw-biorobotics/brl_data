@@ -158,7 +158,7 @@ class metadata:
         self.data_file_name = name
 
     # write out metadata (OVERWRITE old metadata)
-    def save(self,folder,MDjson=BRL_json_metadata):
+    def save(self,MDjson=BRL_json_metadata):
         if len(self.data_file_name) == 0:
             brl_error(" no data file name has been specified.")
 
@@ -440,7 +440,7 @@ class datafile:
         return md
     
     def write_metadata(self):
-        self.metadata.save(self.folder)  # save into same folder as data
+        self.metadata.save()  # save into same folder as data
 
     def validate(self): #datafaile
         vis = validinputs()
