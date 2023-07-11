@@ -557,6 +557,8 @@ class datafile:
                 brl_error('json data file reading not yet supported (only for metadata)')
             else:
                 brl_error('Attempting to read a file that does not exist: ' + self.name)
+            #store the hashcode which is not known when open for reading except in filename
+            self.hashcode = self.name.split('/')[-1].split('_')[1] # get hash code from name
             # get the metadata about the file we are reading
             self.metadata = self.read_oldmetadata()
             self.metadata.polish()  # convert str metadata values to their types
