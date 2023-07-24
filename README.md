@@ -17,6 +17,8 @@
 
 ## News
 
+* New: 24-Jul-23:  added a utility 'mdview.py' to quickly pull up and view/edit the
+metadata with just a few characters from the hash code.
 * New: 28-Jun-23:  Created example file (brl_data_read_a_file_example.py) for
 simple reading of an existing brl_data datafile.  Now uses the metadata for smart
 type conversion from .csv string data.  You can still use regular python .csv
