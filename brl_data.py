@@ -352,23 +352,22 @@ class metadata:
     def get_user_basics(self):
         vis = validinputs()
         print('\nPlease enter basic information for the metadata you would like to create:')
-        smart_query(self.d,'Ncols',msg='How many columns of data?', example=3) # str type for everything!
-        smart_query(self.d,'Names',msg='Column names (as list [...]):', example=['col 1', 'col 2', 'col 3'])
-        smart_query(self.d,'Types',msg='Column Types (as list [...]):', example=[ str(type(1)), str(type(1)),str(type(1)),str(type(1)),]) # must convert types to strings (per json pkg)
+        smart_query(self.d,'Ncols',msg='How many columns of data?', example=4) # str type for everything!
+        nc = int(self.d['Ncols'])
+        # hack to work with brl_data_min_example.py!!
+        itype = str(type(5))
+        ftype = str(type(3.1416))
+        types = [itype] + 3*[ftype]
+        names = ['N','X1','Y1','Z1']
+        smart_query(self.d,'Types',msg='Column Types (as list [...]):', example=types) # must convert types to strings (per json pkg)
+        smart_query(self.d,'Names',msg='Column names (as list [...]):', example=names)
         smart_query(self.d,'Description',msg='...  description ...')
         smart_query(self.d,'Notes',msg='Notes: (...):', example='...some notes...')
-        smart_query(self.d,'GitLatestCommit',example='Not Recorded')
-        smart_query(self.d,'Investigator', example='*your name*')
-        #
-        # generate initials
-        n1, n2 = self.d['Investigator'].split()
-        n1 = n1[0]
-        n2 = n2[0]
-
-        smart_query(self.d,'Initials', msg='Your Initials',example=n1+n2)
+        #smart_query(self.d,'GitLatestCommit',example='Not Recorded')
+        smart_query(self.d,'Initials', msg='Your Initials',example='AB')
      #   smart_query(self.d,'OpenTime', msg='Creation Date:', example= '07-March-2017')
      #   smart_query(self.d,'FileType', example='.csv or .json',valids=vis.validfiletypes)
-        smart_query(self.d,'TestType', example='single or longterm',valids=vis.validtesttypes)
+        smart_query(self.d,'TestType', example='simulation', valids=vis.validtesttypes)
 
 
     def __repr__(self):
@@ -527,6 +526,7 @@ class datafile:
         if self.name == None:
             brl_error('file name has not been set')
         if not self.validate():
+            print('\nAutomatically prompting you for metadata:')
             self.request_user_data()
         self.metadata.d['OpenTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
         self.metadata.d['Nrows'] = 0
@@ -669,8 +669,9 @@ class datafile:
         try: # may fail if no modified files, not a git repo etc.
             modified = subprocess.check_output('git status | grep modified:',cwd=self.gitrepofolder,shell=True).decode('UTF-8').strip().replace('\n',' | ')
         except:
-            print('Code is unmodified')
-            modified = ''
+            modified = 'None'
+
+        print('Modification status of code: ',modified)
         for dep in ast.literal_eval(self.metadata.d['Dependencies']):
             if dep in modified:
                 DO_AUTOCOMM = False

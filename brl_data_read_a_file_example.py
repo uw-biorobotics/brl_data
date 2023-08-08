@@ -20,27 +20,32 @@ import os
 #
 # ask user for a hint so they don't have to enter a long filename
 #
-files = os.listdir('.')
-csvfiles = []
-for f in files:
-    if '.csv' in f:
-        csvfiles.append(f)
 
-hashstr = input('Enter first 4 characters of the hash from the filename:')
+hashstr = input('Enter first 4+ characters of the hash from the filename:')
 if len(hashstr) < 4:
     print(' you like to live dangerously! (might match multiple files)')
-dfname = None
-for f in csvfiles:
-    if hashstr in f:
-        dfname = f
-if not dfname:
-    bd.brl_error('Somethings wrong with hash string (not found)')
 
 #
-#  OK - now lets create a datafile and open it for reading
+#  the finder class looks through a list of directories
+#     and finds matching file names
+#
+myfinder = bd.finder()  # a gadget to easily find your data files (or any files).
+keys = [hashstr, '.csv']  # two sub-strings to look for in filename
+dirs = ['.']      # a list of directories/folders you want it to look in
+myfinder.set_dirs(dirs)
+result = myfinder.findh(keys)
+if len(result) > 1:
+    bd.brl_error('multiple files match the keys: ',keys)
+if len(result) < 1:
+    bd.brl_error('No file(s) found for the keys: ',keys)
+dfname   = result[0][1]
+dffolder = result[0][0]
+
+#
+#  OK - now lets create a datafile instance and open it for reading
 #
 
-print('opening ', dfname)
+print('\n                         Opening ', dffolder+'/'+dfname,'\n')
 df = bd.datafile('', '','')  # open it with blank title info
 df.set_folders('','')        # set these to wherever you want to open datafiles
 df.open('r',tname=dfname)
