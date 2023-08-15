@@ -34,7 +34,7 @@ for i in range(100):
     d2.append(f1)
     d3.append(f2)
     d4.append(f3)
-    
+
 # done with generating fake data
 #
 #####################################################################
@@ -42,20 +42,28 @@ for i in range(100):
 
 # create a datafile with:
 #    descriptive name (testingFile)
-#    investigator initials (BH_
+#    investigator initials (BH)
 #    data file type    (valid list is in the class validinputs())  (experiment, simulation, etc)
+
+#
+#   library will automatically promt you.  Just <enter> to accept the
+#     prompt examples.   Changing these is a little sketchy and it's
+#     better to use your code to set the key metadata (see brl_data_example.py)
+#     (right now the lib is hacked to prompt to match this example).
+
 df1 = bd.datafile('testingFile','BH','experiment')
 df1.set_folders('','')   # everything will be in the same folder
 
 print('minimalist example: datafile name: ',df1.name)
-#  
+#
     
 df1.open()  # let's open the file (default is for writing)
 
 
-##  Now lets write out data
+##  Now lets write out data  (note this rquires 4 cols)
 for i,d in enumerate(d1):
     row = [d, d2[i], d3[i], d4[i]]
     df1.write(row)
 df1.close()   # all done
 
+print('\n\n     Your data file is read.  Look for hash: ',df1.hashcode,'\n\n')
