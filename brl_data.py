@@ -133,7 +133,7 @@ def float_conv(x):
 #
 class finder:
     def _init__(self):
-        self.dirs = ''
+        self.dirs = None
         self.keys = []
         #print('datadir: ', datadir)
         #print('targethash: ', targethash)
@@ -141,8 +141,9 @@ class finder:
     def set_dirs(self,dlist):
         self.dirs = dlist
 
-
     def findh(self,keys):
+        if self.dirs is None:
+            brl_error('finder: You must specify some dirs/folders with .set_dirs(ds) first.')
         self.keys = keys
         # keys: a list of strings which must be contained in filename
         if len(self.dirs) < 1:
@@ -280,7 +281,7 @@ class metadata:
                 elif t == str_type:
                     self.row_type_funcs.append(null_conversion)
                 else:
-                    brl_error('metadata.polish: trying to convert an unknown type')
+                    brl_error('metadata.polish: trying to convert an unknown type: '+t)
 
             #3) derive proper string format tags for each col.
             self.row_fmt_tags = []
@@ -482,7 +483,7 @@ class datafile:
     def validate(self): #datafaile
         vis = validinputs()
         valid = True
-        print('df.validate: Validating: ',self.name)
+        #print('df.validate: Validating: ',self.name)
         if not( len(self.name) > 0 and os.path.exists(self.name)): # skip if reading or appending exiting file
             if self.initials == '':
                 brl_error('missing initials for filename',fatal=False)
