@@ -13,6 +13,7 @@ import inspect
 import sys, os, subprocess, ast
 import csv
 import json
+import re
 
 #############  Configurations
 #
@@ -125,6 +126,23 @@ def int_conv(x):
     return int(x)
 def float_conv(x):
     return float(x)
+
+
+
+hashmatcher = r'[^a-f,^0-9]*([a-f, 0-9]{8})[^a-f,^0-9]*' # 8character hex hash
+hmc = re.compile(hashmatcher)
+
+def getHashFromFilename(fn):
+        result = hmc.findall(fn)
+        if len(result) < 1:
+            print('getHashFromFilename result:',result)
+            print(f'No hash found in filename: {fn} (should have {hver1})')
+            quit()
+        if len(result) > 1:
+            print(f'getHashfromFilename - warning: {len(result)} hashes found only first one used')
+        hashResult = result[0]
+        #print(f'result: {result}, hv2: {hashResult}')
+        return hashResult
 
 ##################################
 #
