@@ -547,7 +547,8 @@ class datafile:
         if not self.validate():
             print('\nAutomatically prompting you for metadata:')
             self.request_user_data()
-        self.metadata.d['OpenTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
+        self.topen = dt.datetime.now()
+        self.metadata.d['OpenTime'] = self.topen.strftime("%I:%M:%S%p, %B %d, %Y")
         self.metadata.d['Nrows'] = 0
         if self.accessmode == 'w':   # write mode
             ##
@@ -579,8 +580,10 @@ class datafile:
             if os.path.exists(self.name):
                 ## here we are updating / adding to an existing file so we need to
                 #read in and update metadata
-                tmd = self.read_oldmetadata().d
+                tmmd = self.read_oldmetadata()
+                tmd = tmmd.d
                 self.metadata.d['Nrows'] = tmd['Nrows']     # these two should reference the ORIGINAL open
+                self.topen = tmmd.topen #time format
                 self.metadata.d['OpenTime']=tmd['OpenTime'] #
                 #
                 # now some sanity checks
@@ -656,7 +659,10 @@ class datafile:
             self.fd.close()  # close the datafile
             if self.accessmode in ['w','a']:
                 # now output the new metadata if writing or appending only
-                self.metadata.d['CloseTime'] = dt.datetime.now().strftime("%I:%M%p, %B %d, %Y")
+                rightnow = dt.datetime.now()
+                self.metadata.d['CloseTime'] = rightnow.strftime("%I:%M:%S%p, %B %d, %Y")
+                duration = rightnow - self.topen
+                self.metadata.d['File Duration'] = duration.total_seconds()
                 #
                 #  Save the metadata at very end
                 #
