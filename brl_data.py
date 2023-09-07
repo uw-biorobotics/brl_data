@@ -134,13 +134,10 @@ hmc = re.compile(hashmatcher)
 
 def getHashFromFilename(fn):
         result = hmc.findall(fn)
-        if result is None or result == []:
-            return None
-        if len(result) > 1:
-            print(f'getHashfromFilename - warning: {len(result)} hashes found only first one used')
-        hashResult = result[0]
+        if result is None:
+            result = []
         #print(f'result: {result}, hv2: {hashResult}')
-        return hashResult
+        return result # a list of hash codes found in the file name (comparison files have 2!)
 
 ##################################
 #
