@@ -128,16 +128,14 @@ def float_conv(x):
     return float(x)
 
 
-
-hashmatcher = r'[^a-f,^0-9]*([a-f, 0-9]{8})[^a-f,^0-9]*' # 8character hex hash
+hashmatcher = '(?<![0-9A-Fa-f])[0-9A-Fa-f]{8}(?![0-9A-Fa-f])'  # Thanks ChatGPT!!!
+#   note - this matches numbers of > 8 digits(!) (not sure why)
 hmc = re.compile(hashmatcher)
 
 def getHashFromFilename(fn):
         result = hmc.findall(fn)
-        if len(result) < 1:
-            print('getHashFromFilename result:',result)
-            print(f'No hash found in filename: {fn} (should have {hver1})')
-            quit()
+        if result is None or result == []:
+            return None
         if len(result) > 1:
             print(f'getHashfromFilename - warning: {len(result)} hashes found only first one used')
         hashResult = result[0]
