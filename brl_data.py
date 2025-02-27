@@ -470,6 +470,7 @@ class datafile:
     def set_metadata(self,names, types, notes):
         N = len(names)
         if len(types) != N or len(notes) != N:
+            print(f'{len(names)} Names, {len(types)} Types, {len(notes)} notes')
             brl_error('uneven metadata. do you need to make metadata into lists?')
         for i,t in enumerate(types):
             types[i] = str(t)    # .json can't serialize types
@@ -746,8 +747,11 @@ def get_latest_commit(folder='no folder'):
                 folder = subprocess.check_output('cd',shell=True).strip()
 
     #    brl_error('checking git in folder: '+folder,fatal=False)
-        tmp = subprocess.check_output('git log',cwd=folder, shell=True).decode('UTF-8').split('\n')
-    return str('Git: '+tmp[0]+' '+tmp[4].strip())
+        try:
+            tmp = subprocess.check_output('git log',cwd=folder, shell=True).decode('UTF-8').split('\n')
+            return str('Git: '+tmp[0]+' '+tmp[4].strip())
+        except:
+            return 'Git: Non git folder'
 
 ###########################################  Configurations
 #############   Parameter Files
