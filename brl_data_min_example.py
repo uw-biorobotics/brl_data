@@ -7,17 +7,17 @@
 
 
 ##   we have an experiment which generates rows containing one int and three floats.
-##
-##      We will get 100 of these and we want to store them in a datafile with associated
+##  
+##      We will get 100 of these and we want to store them in a datafile with associated 
 ##      metadata.
 
 import brl_data as bd
 import math as m
-
-
+ 
+  
 
 ####################################################################
-##                        Generate some fake data
+##                        Generate some fake data  
 
 d1 = []
 d2 = []
@@ -29,7 +29,7 @@ for i in range(100):
     f1 = float(i) * 16.273
     f2 = 4928.0/float(i+3)
     f3 = -57.3 + m.sqrt(float(i))* 3.716
-
+   
     d1.append(intval)
     d2.append(f1)
     d3.append(f2)
@@ -56,7 +56,7 @@ df1.set_folders('','')   # everything will be in the same folder
 
 print('minimalist example: datafile name: ',df1.name)
 #
-
+    
 df1.open()  # let's open the file (default is for writing)
 
 
@@ -66,4 +66,4 @@ for i,d in enumerate(d1):
     df1.write(row)
 df1.close()   # all done
 
-print('\n\n     Your data file is ready.  Look for hash: ',df1.hashcode,'\n\n')
+print('\n\n     Your data file is read.  Look for hash: ',df1.hashcode,'\n\n')

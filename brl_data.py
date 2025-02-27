@@ -579,7 +579,9 @@ class datafile:
                 tmmd = self.read_oldmetadata()
                 tmd = tmmd.d
                 self.metadata.d['Nrows'] = tmd['Nrows']     # these two should reference the ORIGINAL open
-                self.topen = tmmd.topen #time format
+                # print('Metadata here:', tmmd)
+                # topen = time.parse(tmd['OpenTime'])
+                self.topen = self.topen #time format
                 self.metadata.d['OpenTime']=tmd['OpenTime'] #
                 #
                 # now some sanity checks
@@ -748,9 +750,12 @@ def get_latest_commit(folder='no folder'):
 
     #    brl_error('checking git in folder: '+folder,fatal=False)
         try:
-            tmp = subprocess.check_output('git log',cwd=folder, shell=True).decode('UTF-8').split('\n')
+            # print('git attempt=-------')
+            tmp = subprocess.check_output('git log',cwd=folder, shell=True, capture_output=True).decode('UTF-8').split('\n').stdout
+            # print('--------------')
             return str('Git: '+tmp[0]+' '+tmp[4].strip())
         except:
+            # print('--------------')
             return 'Git: Non git folder'
 
 ###########################################  Configurations
