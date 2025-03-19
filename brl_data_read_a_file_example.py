@@ -37,7 +37,7 @@ result = myfinder.findh(keys)
 if len(result) > 1:
     bd.brl_error('multiple files match the keys: ',keys)
 if len(result) < 1:
-    bd.brl_error('No file(s) found for the keys: ',keys)
+    bd.brl_error('No file(s) found for the keys: '+str(keys)+' in dirs: '+ str(dirs))
 dfname   = result[0][1]
 dffolder = result[0][0]
 
