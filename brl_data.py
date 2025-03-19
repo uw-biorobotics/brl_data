@@ -126,6 +126,8 @@ def int_conv(x):
     return int(x)
 def float_conv(x):
     return float(x)
+def complex_conv(x):
+    return complex(x)
 
 
 hashmatcher = '(?<![0-9A-Fa-f])[0-9A-Fa-f]{8}(?![0-9A-Fa-f])'  # Thanks ChatGPT!!!
@@ -254,6 +256,7 @@ class metadata:
         int_type = str(type(5))    # these have to be strings b/c json can't serialize types(!)
         float_type = str(type(3.14159))
         str_type = str(type('hello'))
+        complex_type = str(type(1.0+2j))
 
         # intelligently convert types from string in metadata
         if not self.polished:
@@ -293,6 +296,8 @@ class metadata:
                     self.row_type_funcs.append(float_conv)
                 elif t == str_type:
                     self.row_type_funcs.append(null_conversion)
+                elif t == complex_type:
+                    self.row_type_funcs.append(complex_conv)
                 else:
                     brl_error('metadata.polish: trying to convert an unknown type: '+t)
 
@@ -306,6 +311,8 @@ class metadata:
                     self.row_fmt_tags.append('{:10.2f}')
                 if t == str_type:
                     self.row_fmt_tags.append('{:10}')
+                if t == complex_type:
+                    self.row_fmt_tags.append('{:8.4f}')
             self.polished = True
             return
         #print('already polished: ',self.data_file_name.replace('.csv',''))
@@ -329,7 +336,7 @@ class metadata:
         metadata_fname = metadata_fname.replace('meta_meta', 'meta')
 
         try:
-            #print('metadata.read: Opening: ', metadata_fname)
+            print('metadata.read: Opening: ', metadata_fname)
             metadata_fd = open(metadata_fname,'r')
         except:
             brl_error("Can't open metadata file: [{:}]".format(metadata_fname),fatal=True)
@@ -579,9 +586,7 @@ class datafile:
                 tmmd = self.read_oldmetadata()
                 tmd = tmmd.d
                 self.metadata.d['Nrows'] = tmd['Nrows']     # these two should reference the ORIGINAL open
-                # print('Metadata here:', tmmd)
-                # topen = time.parse(tmd['OpenTime'])
-                self.topen = self.topen #time format
+                self.topen = tmmd.topen #time format
                 self.metadata.d['OpenTime']=tmd['OpenTime'] #
                 #
                 # now some sanity checks
@@ -749,14 +754,8 @@ def get_latest_commit(folder='no folder'):
                 folder = subprocess.check_output('cd',shell=True).strip()
 
     #    brl_error('checking git in folder: '+folder,fatal=False)
-        try:
-            # print('git attempt=-------')
-            tmp = subprocess.check_output('git log',cwd=folder, shell=True, capture_output=True).decode('UTF-8').split('\n').stdout
-            # print('--------------')
-            return str('Git: '+tmp[0]+' '+tmp[4].strip())
-        except:
-            # print('--------------')
-            return 'Git: Non git folder'
+        tmp = subprocess.check_output('git log',cwd=folder, shell=True).decode('UTF-8').split('\n')
+    return str('Git: '+tmp[0]+' '+tmp[4].strip())
 
 ###########################################  Configurations
 #############   Parameter Files

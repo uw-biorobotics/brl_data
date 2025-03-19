@@ -45,7 +45,9 @@ dffolder = result[0][0]
 #  OK - now lets create a datafile instance and open it for reading
 #
 
-print('\n                         Opening ', dffolder+'/'+dfname,'\n')
+
+pathname = dffolder+'/'+dfname
+print('\n                         Opening ', pathname,'\n')
 df = bd.datafile('', '','')  # open it with blank title info
 df.set_folders('','')        # set these to wherever you want to open datafiles
 df.open('r',tname=dfname)
