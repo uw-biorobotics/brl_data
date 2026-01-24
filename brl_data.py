@@ -182,7 +182,7 @@ class finder:
 
 class validinputs:
     def __init__(self):
-        self.validtesttypes = ['simulation','single', 'longterm']  # examples only
+        # self.validtesttypes = ['simulation','single', 'longterm', 'engineering']  # too rigid - allow anything  TODO: allow user to customize
         self.validfiletypes = ['.csv', '.json']       # others?  or standardize on csv??
         validPfTypes = ['production','communication']
         self.production_keywords= ['homegitFolder', 'debugOutput', 'homedataFolder','dataFolder','weekdays','ops_per_day', 'duration_mean','duration_sd','start_hour','end_hour','end_date','ename','homeFolder','githomeFolder','datahomeFolder']  # production keywords
@@ -199,7 +199,7 @@ class metadata:
     def __init__(self):
         self.d = {}  # the actual metadata
         self.data_file_name = ''
-        self.d['Dependencies'] = str([ sys.argv[0],'brl_data.py','icarus.py' ])
+        self.d['Dependencies'] = str([ sys.argv[0],'brl_data.py' ])
         self.polished = False # after reading md, convert types
          # functions to convert from strings to correct types
          #   these are set in metadata.polish()
@@ -388,7 +388,7 @@ class metadata:
         smart_query(self.d,'Initials', msg='Your Initials',example='AB')
      #   smart_query(self.d,'OpenTime', msg='Creation Date:', example= '07-March-2017')
      #   smart_query(self.d,'FileType', example='.csv or .json',valids=vis.validfiletypes)
-        smart_query(self.d,'TestType', example='simulation', valids=vis.validtesttypes)
+        smart_query(self.d,'TestType', example='simulation')
 
 
     def __repr__(self):
@@ -508,9 +508,9 @@ class datafile:
             if self.initials == '':
                 brl_error('missing initials for filename',fatal=False)
                 valid = False
-            if not self.ttype in vis.validtesttypes:
-                brl_error('test type {:} is unknown in {:}'.format(self.ttype,vis.validtesttypes),fatal=False)
-                valid = False
+            # if not self.ttype in vis.validtesttypes:
+            #     brl_error('test type {:} is unknown in {:}'.format(self.ttype,vis.validtesttypes),fatal=False)
+            #     valid = False
             if type(self.descrip) is not type('a string') or self.descrip == '':
                 brl_error('invalid description for filename',fatal=False)
                 valid = False
@@ -584,10 +584,11 @@ class datafile:
                 ## here we are updating / adding to an existing file so we need to
                 #read in and update metadata
                 tmmd = self.read_oldmetadata()
-                tmd = tmmd.d
+                tmd = tmmd.d   # get old metadata dictionary
                 self.metadata.d['Nrows'] = tmd['Nrows']     # these two should reference the ORIGINAL open
-                self.topen = tmmd.topen #time format
+                # self.topen = tmmd.topen #time format
                 self.metadata.d['OpenTime']=tmd['OpenTime'] #
+                self.topen = dt.datetime.strptime(tmd['OpenTime'], "%I:%M:%S%p, %B %d, %Y")
                 #
                 # now some sanity checks
                 if self.metadata.d['Ncols'] != tmd['Ncols']:
