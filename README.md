@@ -17,6 +17,12 @@
 
 ## News
 
+* New: 26-Jan-26:  Make it easier for a new user not to have to edit code.  New file brl_data.conf will
+initialize some key metadata (meta-metadata??) such as the user's name and the data folder location.
+brl_data will look for brl_data.conf in a few 'logical' places and not be too picky.  File format:
+   -  user_name   First Last
+   -  data_folder   < full pathname of where you want data to go>
+
 * New: 24-Jul-23:  added a utility 'mdview.py' to quickly pull up and view/edit the
 metadata with just a few characters from the hash code.
 * New: 28-Jun-23:  Created example file (brl_data_read_a_file_example.py) for

@@ -428,6 +428,12 @@ class datafile:
         self.metadata.d['Nrows'] = 0 # number of rows of data written so far.
         self.dataN = 0
         self.setFoldersFlag = False
+        #
+        #  read config file for basic parameters (so they don't have to be coded)
+        #
+        # 1) find brl_data.conf  (e.g. ~, . , ./brl_data/, etc) use newest of files found
+        # 2) parse it and set key quantities (initials, metadata.d['Name'], testtype (self.ttype), etc )
+        # done
 
     def set_folders(self, datafolder, gitfolder):
         dirsOK = True
