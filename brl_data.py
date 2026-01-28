@@ -11,6 +11,7 @@ import datetime as dt
 import uuid
 import inspect
 import sys, os, subprocess, ast
+from pathlib import Path
 import csv
 import json
 import re
@@ -411,9 +412,9 @@ class metadata:
 #   TODO: create a class for image files and a class for video files
 
 class datafile:
-    def __init__(self, descrip_str, inv_init, testtype):
+    def __init__(self, descrip_str, user_initials, testtype):
         self.descrip = descrip_str
-        self.initials = inv_init
+        self.initials = user_initials
         self.ttype = testtype  # defined in "validinputs" class
         self.ftype = '.csv'  # only .csv at this point
         self.fd = None  # file descriptor
@@ -427,30 +428,87 @@ class datafile:
         self.metadata.d['Ncols'] = 0 # correct length of data vector
         self.metadata.d['Nrows'] = 0 # number of rows of data written so far.
         self.dataN = 0
-        self.setFoldersFlag = False
+        self.setDataFoldersFlag = False
         #
         #  read config file for basic parameters (so they don't have to be coded)
         #
         # 1) find brl_data.conf  (e.g. ~, . , ./brl_data/, etc) use newest of files found
         # 2) parse it and set key quantities (initials, metadata.d['Name'], testtype (self.ttype), etc )
         # done
+        if (self.read_brl_data_config()):
+            print('Read brl_data_config file.')
+        else:
+            print('No brl_data_config file was found.')
+
+
+    def read_brl_data_config(self):
+        #
+        #  Find the latest fresh config file
+        #  places to look for it.
+        dirs = [Path.home(), Path.cwd(), Path.cwd() / 'brl_data']
+        # check them:
+        existing_files = []
+        for dir in dirs:
+            con_path = dir / 'brl_data.conf'
+            if con_path.is_file():
+                existing_files.append(con_path)
+        if existing_files:
+            newestCF = max(existing_files, key=lambda p: p.stat().st_mtime)
+        else:
+            return False
+        fp = open(newestCF, 'r')
+        for line in fp:
+            wds = line.split()
+            if len(wds)<1:
+                next
+            if len(wds)==1:
+                brl_error(f'unknown config input: {wds}',fatal=False)
+
+            if wds[0] == 'user_name':
+                self.metadata.d['UserName']= ' '.join(wds[1:])
+                self.initials = ''
+                for n in wds[1:]: # get initials
+                    self.initials += n[0].upper()
+            if wds[0] == 'data_folder':
+                self.set_data_folder(wds[1])
+
+            if wds[0] == 'git_folder':
+                self.set_git_folder(wds[1])
+
+            if wds[0] == 'test_type':
+                self.ttype = wds[1]
+
+            if wds[0] == 'new_metadata' and len(wds)==3:
+                self.metadata.d[wds[1]]=wds[2]
+
+        return True
 
     def set_folders(self, datafolder, gitfolder):
+        self.set_data_folder(datafolder)
+        self.set_git_folder(gitfolder)
+
+    def set_data_folder(self, datafolder):
         dirsOK = True
         #'' is allowed, to mean the current directory
         if (not os.path.isdir(datafolder)) and datafolder != '':
             dirsOK = False
+        if not dirsOK:
+            brl_error(f'data_folder {datafolder} does not exist')
+        self.set_data_folder(datafolder)
+        # can only be done after folder is set
+        self.setDataFoldersFlag = True
+        self.gen_name()  # generate output filename
+        self.metadata.data_file_name = self.name
+
+    def set_git_folder(self,gitfolder):
+        dirsOK = True
         if (not os.path.isdir(gitfolder)) and  gitfolder != '':
             dirsOK = False
         if not dirsOK:
-            brl_error('One of the requested directories ({:}, {:}) does not exist'.format(datafolder,gitfolder))
-        self.setFoldersFlag = True
-        self.set_data_folder(datafolder)
+            brl_error(f'git_folder {gitfolder} does not exist')
+        # can only be done after folder is set
         self.gitrepofolder = gitfolder
-        # these can only be done after folders are set
         self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
-        self.gen_name()  # generate output filename
-        self.metadata.data_file_name = self.name
 
 
     def set_both_filenames(self, newname):
@@ -543,8 +601,8 @@ class datafile:
         #print('opening: ', tname, ' in ', vis.validfiletypes)
         if self.ftype not in vis.validfiletypes:
                 brl_error('trying to open unknown file type,'+self.ftype+', must be '+str(vis.validfiletypes))
-        if not self.setFoldersFlag:
-            brl_error('tried to open a datafile without calling set_folders() first.')
+        if not self.setDataFoldersFlag:
+            brl_error('tried to open a datafile without setting up data directory first.')
         if tname != None:
             self.name = tname
             if mode == 'w' and os.path.exists(tname):
