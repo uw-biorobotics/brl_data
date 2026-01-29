@@ -429,18 +429,25 @@ class datafile:
         self.metadata.d['Nrows'] = 0 # number of rows of data written so far.
         self.dataN = 0
         self.setDataFoldersFlag = False
+        self.config_file_used = False
         #
         #  read config file for basic parameters (so they don't have to be coded)
         #
         # 1) find brl_data.conf  (e.g. ~, . , ./brl_data/, etc) use newest of files found
         # 2) parse it and set key quantities (initials, metadata.d['Name'], testtype (self.ttype), etc )
         # done
-        if (self.read_brl_data_config()):
+        if self.read_brl_data_config():
+            self.config_file_used = True
             print('Read brl_data_config file.')
         else:
             print('No brl_data_config file was found.')
-        print(f'TESTING: self.setDataFoldersFlag:  {self.setDataFoldersFlag}')
-
+            self.config_file_used = False
+            print('brl_data.py: Got Here!',flush=True) ###################################################################
+            self.set_data_folder(str(Path.home()))  # '~'
+            self.set_git_folder(str(Path.cwd()))   # '.'
+            print('    set folders to defaults:')
+            print(f'        data: {str(Path.home())}')
+            print(f'         git: {str(Path.cwd())}')
 
     def read_brl_data_config(self):
         #
