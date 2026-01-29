@@ -421,8 +421,8 @@ class datafile:
         self.name = ''    # can override this any time
         self.hashcode=brl_id(8)
         self.accessmode=None  # set by self.open()
-        self.folder = ''  # can direct datafiles into a folder
-        self.gitrepofolder = ''   # place where current code lives
+        self.data_folder = ''  # can direct datafiles into a folder
+        self.git_repo_folder = ''   # place where current code lives
         self.output_class = None  # for example:  csv.writer()
         self.metadata = metadata()
         self.metadata.d['Ncols'] = 0 # correct length of data vector
@@ -443,11 +443,11 @@ class datafile:
             print('No brl_data_config file was found.')
             self.config_file_used = False
             print('brl_data.py: Got Here!',flush=True) ###################################################################
-            self.set_data_folder(str(Path.home()))  # '~'
+            self.set_data_folder(str(Path.cwd()))  # '~'
             self.set_git_folder(str(Path.cwd()))   # '.'
             print('    set folders to defaults:')
-            print(f'        data: {str(Path.home())}')
-            print(f'         git: {str(Path.cwd())}')
+            print(f'        data: {self.data_folder}')
+            print(f'         git: {self.git_repo_folder}')
 
     def read_brl_data_config(self):
         #
@@ -513,7 +513,7 @@ class datafile:
             brl_error(f'data_folder {datafolder} does not exist')
         # can only be done after folder is set
         self.setDataFoldersFlag = True
-        self.folder = datafolder
+        self.data_folder = datafolder
         self.gen_name()  # generate output filename
         self.metadata.data_file_name = self.name
 
@@ -524,8 +524,8 @@ class datafile:
         if not dirsOK:
             brl_error(f'git_folder {gitfolder} does not exist')
         # can only be done after folder is set
-        self.gitrepofolder = gitfolder
-        self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
+        self.git_repo_folder = gitfolder
+        self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.git_repo_folder)
 
 
     def set_both_filenames(self, newname):
@@ -559,7 +559,7 @@ class datafile:
         self.metadata.d['Names'] = names
         self.metadata.d['Types'] = types
         self.metadata.d['Notes'] = notes
-        self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.gitrepofolder)
+        self.metadata.d['GitLatestCommit'] = get_latest_commit(folder=self.git_repo_folder)
 
     def read_oldmetadata(self,tname=None):
         md = metadata()
@@ -596,10 +596,10 @@ class datafile:
         self.metadata.get_user_basics()
 
     def add_folder_to_fname(self): # if folder=='' does nothing
-        if len(self.folder) > 0:
-            if self.folder[-1] != '/':
-                self.folder = self.folder+'/'
-            self.name = self.folder + self.name
+        if len(self.data_folder) > 0:
+            if self.data_folder[-1] != '/':
+                self.data_folder = self.data_folder+'/'
+            self.name = self.data_folder + self.name
 
 
     # if you want to open a specific existing file,f
@@ -770,7 +770,7 @@ class datafile:
         #
         #
         try: # may fail if no modified files, not a git repo etc.
-            modified = subprocess.check_output('git status | grep modified:',cwd=self.gitrepofolder,shell=True).decode('UTF-8').strip().replace('\n',' | ')
+            modified = subprocess.check_output('git status | grep modified:',cwd=self.git_repo_folder,shell=True).decode('UTF-8').strip().replace('\n',' | ')
         except:
             modified = 'None'
 
@@ -796,17 +796,17 @@ class datafile:
                     GIT_FAIL = False
                     try:
                         # make git add and commit the new source code.
-                        a = subprocess.check_output(['git','add',dep],cwd=self.gitrepofolder)
+                        a = subprocess.check_output(['git','add',dep],cwd=self.git_repo_folder)
                     except:
                         print('Fail 1')
                         GIT_FAIL = True
                     try: # do the commit
-                        b = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd=self.gitrepofolder)
+                        b = subprocess.check_output(['git', 'commit', '-m', "'auto commit due to change in "+dep+"'"],cwd=self.git_repo_folder)
                     except:
                         print('Fail 2')
                         GIT_FAIL = True
                     try:
-                        new_commit_info = get_latest_commit(folder=self.gitrepofolder)
+                        new_commit_info = get_latest_commit(folder=self.git_repo_folder)
                     except:
                         print('Fail 3')
                         GIT_FAIL = True
@@ -814,7 +814,7 @@ class datafile:
                         brl_error('Something went wrong with git commands!')
 
                     brl_error('Notice: Source code was changed: auto commit has been done, metadata updated.',fatal=False)
-        info = get_latest_commit(folder=self.gitrepofolder)
+        info = get_latest_commit(folder=self.git_repo_folder)
         return info
 
 
