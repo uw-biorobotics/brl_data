@@ -333,7 +333,10 @@ if __name__ == '__main__':
     if not ('n' in x.lower()):
         files = glob.glob('*_appendingfile_*')
         files += glob.glob('*_testingFile_*')
+        files += glob.glob('metadata_test_file.meta')
+        files += glob.glob('metadata_test_file_meta.json')
         for p in files:
+            print('    removing', p)
             os.remove(p)
     else:
         print('testing files saved.')
