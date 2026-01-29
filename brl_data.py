@@ -439,6 +439,7 @@ class datafile:
             print('Read brl_data_config file.')
         else:
             print('No brl_data_config file was found.')
+        print(f'TESTING: self.setDataFoldersFlag:  {self.setDataFoldersFlag}')
 
 
     def read_brl_data_config(self):
@@ -459,6 +460,7 @@ class datafile:
         fp = open(newestCF, 'r')
         for line in fp:
             wds = line.split()
+            print(f'TESTING: config line: {wds}')
             if len(wds)<1:
                 next
             if len(wds)==1:
@@ -488,15 +490,23 @@ class datafile:
         self.set_git_folder(gitfolder)
 
     def set_data_folder(self, datafolder):
+        if self.fd:
+            brl_error('Its too late to change folder to'+datafolder+'. datafile already open')
+        if '.' in datafolder:
+            brl_error('You cannot use . in folder name: ' + datafolder)
         dirsOK = True
         #'' is allowed, to mean the current directory
         if (not os.path.isdir(datafolder)) and datafolder != '':
             dirsOK = False
         if not dirsOK:
+            print('\n\n')
+            print(f'    you have set the datafolder to: [{datafolder}] but that folder does not exist.')
+            print(f'        suggestion:  > mkdir {datafolder}')
+            print('\n\n')
             brl_error(f'data_folder {datafolder} does not exist')
-        self.set_data_folder(datafolder)
         # can only be done after folder is set
         self.setDataFoldersFlag = True
+        self.folder = datafolder
         self.gen_name()  # generate output filename
         self.metadata.data_file_name = self.name
 
@@ -517,13 +527,6 @@ class datafile:
 
     def set_filenames(self,newname):
         self.name = newname
-
-    def set_data_folder(self,folname):
-        if self.fd:
-            brl_error('Its too late to change folder to'+folname+'. datafile already open')
-        if '.' in folname:
-            brl_error('You cannot use . in folder name: ' + folname)
-        self.folder=folname
 
     def gen_name(self):
         todaydate = dt.datetime.now().strftime('%Y-%m-%d')

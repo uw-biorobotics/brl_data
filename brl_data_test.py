@@ -203,8 +203,11 @@ class TestNonUImethods(ut.TestCase):
             mdo.d[k] = mdd[k]
 
         mdo.polish()
-        mdo.save('',MDjson=True)  # write out a metadata file (jason.dump)
-        mdo3.read(MDjson=True)
+        mdo.save(MDjson=True)  # write out a metadata file (jason.dump)
+        try:
+            mdo3.read(MDjson=True)
+        except:
+            assert False, 'failed to write json metadata'
         mdo3.polish()  # md.read includes automatic string unpacking/type conversion
 
         #assert mdo.d == mdo2.d,  'metadata_json_rw_test (saveJSON(folder))  FAIL'

@@ -137,4 +137,5 @@ if True:  # False to turn off append mode example
         df2.write(row)
     df2.close()
     
+print(f'\n      brl_data_example.py completed successfully \n           (check for new output in {df2.folder}/)')
 quit()

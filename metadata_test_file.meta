@@ -1,4 +1,7 @@
-Dependencies         "['brl_data_test.py', 'brl_data.py', 'icarus.py']"
+Dependencies         "['brl_data_test.py', 'brl_data.py']"
 test1                "val1"
 test2                "val2"
 test3                "val3"
+Names                "['name1', 'name2', 'Name3', 'name4']"
+Types                "["<class 'str'>", "<class 'str'>", "<class 'str'>", "<class 'str'>"]"
+Ncols                "4"
