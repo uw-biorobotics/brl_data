@@ -1,4 +1,4 @@
-#ic_test.py
+#brl_data_test.py
 #
 #   test functions for brl_data classes
 
@@ -16,6 +16,8 @@ import brl_data as bd
 import unittest as ut
 from unittest.mock import patch
 import sys
+import glob
+import os
 
 testParamFileName = 'testParams1' 
 testParamValue = '1234' 
@@ -322,8 +324,17 @@ if __name__ == '__main__':
     # 
     print('executing Unit Tests')
     
-    ut.main()
-    
-    print(' Testing is completed')  # note that this doesn't print - unittest doesn't return!
-    
-     
+    ut.main(exit=False)
+
+    print('\n\n       Testing is completed\n')  # note that this doesn't print - unittest doesn't return!
+
+    x = input('Do you want to clean up auto-generated testing files? (Y/n)')
+
+    if not ('n' in x.lower()):
+        files = glob.glob('*_appendingfile_*')
+        files += glob.glob('*_testingFile_*')
+        for p in files:
+            os.remove(p)
+    else:
+        print('testing files saved.')
+
