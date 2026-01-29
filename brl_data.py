@@ -21,15 +21,15 @@ import re
 #  SUMMARY
 #
 
-NEVER = 0
-ASK   = 1
-ALWAYS = 2
 #  How to treat the situation where code has changed
 #   between the time a file was first opened and some data is appended
 #   This flag specifies: what to do if the code has been modified AFTER
 #   the file was first opened.   If ALWAYS (or user enters 'Y'), then
 #   create a new commit for the code and add it to the metadata.
-BRL_auto_git_commit = ASK
+NEVER = 0
+ASK   = 1
+ALWAYS = 2
+BRL_auto_git_commit = NEVER
 
 #  metadata format:
 #  True = Always save metadata as json object
