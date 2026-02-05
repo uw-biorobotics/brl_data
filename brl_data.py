@@ -12,6 +12,7 @@ import uuid
 import inspect
 import sys, os, subprocess, ast
 from pathlib import Path
+import brl_data
 import csv
 import json
 import re
@@ -156,6 +157,12 @@ class finder:
 
     def set_dirs(self,dlist):
         self.dirs = dlist
+
+    def get_search_dirs(self):
+        tmp = datafile()  # basically just to read the config file for the dirs
+        dirs = [tmp.folder] + tmp.search_folders
+        print('debug: search folders set to: ', dirs)
+        self.set_dirs(dirs)
 
     def findh(self,keys):
         if self.dirs is None:
@@ -423,6 +430,7 @@ class datafile:
         self.accessmode=None  # set by self.open()
         self.folder = ''  # can direct datafiles into a folder
         self.gitrepofolder = ''   # place where current code lives
+        self.search_folders = []  # folders where "class finder()" can look for data
         self.output_class = None  # for example:  csv.writer()
         self.metadata = metadata()
         self.metadata.d['Ncols'] = 0 # correct length of data vector
@@ -473,6 +481,9 @@ class datafile:
                     self.initials += n[0].upper()
             if wds[0] == 'data_folder':
                 self.set_data_folder(wds[1])
+
+            if wds[0] == 'search_folder':
+                self.search_folders.append(wds[1])
 
             if wds[0] == 'git_folder':
                 self.set_git_folder(wds[1])
