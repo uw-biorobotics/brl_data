@@ -17,11 +17,21 @@
 
 ## News
 
-* New: 26-Jan-26:  Make it easier for a new user not to have to edit code.  New file brl_data.conf will
+* New: 29-Jan-26:  Tests are cleaned up and passing.
+
+We now make it easier for a new user not to have to edit code.  New file brl_data.conf will
 initialize some key metadata (meta-metadata??) such as the user's name and the data folder location.
-brl_data will look for brl_data.conf in a few 'logical' places and not be too picky.  File format:
+brl_data will look for brl_data.conf in a few 'logical' places and not be too picky.  File format
+is each line starts with a keyword followed by one or more other words:
    -  user_name   First Last
    -  data_folder   < full pathname of where you want data to go>
+   - git_folder     < full pathname of where do you want it to track git commits of your code (advanced feature) >
+   - test_type     < any word which describes the generic class of data: examples:  experiment, engineeringtest, debugging, demo >
+   - new_metadata  < anything you want to add to the metadata dictionary:  example:  "new_metadata  Location  Arctic Base 9"
+   or "new_metadata  TissueType  Liver">
+
+brl_data.conf is *optional*. defaults will be assumed.   Also you can set these parameters in your code if you prefer,
+even if the file exists you could override them. If present, brl_data.conf is read and parsed when you instantiate a datafile class.
 
 * New: 24-Jul-23:  added a utility 'mdview.py' to quickly pull up and view/edit the
 metadata with just a few characters from the hash code.

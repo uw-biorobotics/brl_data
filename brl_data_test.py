@@ -1,4 +1,4 @@
-#ic_test.py
+#brl_data_test.py
 #
 #   test functions for brl_data classes
 
@@ -16,6 +16,8 @@ import brl_data as bd
 import unittest as ut
 from unittest.mock import patch
 import sys
+import glob
+import os
 
 testParamFileName = 'testParams1' 
 testParamValue = '1234' 
@@ -72,23 +74,29 @@ class TestNonUImethods(ut.TestCase):
     @patch.object(bd.metadata, 'get_user_basics',patch_test_get_user_basics) 
     def test_datafile(self):
         testDeclare()
+
         # create a datafile with:
         #    descriptive name
         #    investigator initials
         #    parameter file type    (internal valid list)
         #    parameter datafile type 
+        print('test_datafile: Got Here!') ###################################################################
+
         df1 = bd.datafile('testingFile','BH','single')
+
         df1.set_folders('','')     # use the same folder
         #
         #   .open will call get_user_basics()
+
         df1.open('w')  # 'w' for fresh start, 'a' for append mode
         df1.dataN = 4  # number of variables. (see also metadata['Ncols'] -- oops!)
         dtest = [3,4,5,6]  # some made up data 
         df1.write(dtest)    # write a row
+
         for i in range(10):   # write 10 more rows
             dtest[3] = i
             df1.write(dtest)
-            
+
         # can set the metadata either at START or END of experiment if desired.
         df1.set_metadata(['d1','d2','d3','d4'], 
                         #[type(5)]*3,    # oops- only 3 types given need 4 (uncomment to test checking)
@@ -103,7 +111,7 @@ class TestNonUImethods(ut.TestCase):
         print(df1.metadata)
         assert df1.validate() == True, 'test file metadata is invalid'   # this should be a valid datafile
         df1.close()
-        
+
         ###  Test file data input routine
         #
         #    create partial datafile setup
@@ -316,8 +324,20 @@ if __name__ == '__main__':
     # 
     print('executing Unit Tests')
     
-    ut.main()
-    
-    print(' Testing is completed')  # note that this doesn't print - unittest doesn't return!
-    
-     
+    ut.main(exit=False)
+
+    print('\n\n       Testing is completed\n')  # note that this doesn't print - unittest doesn't return!
+
+    x = input('Do you want to clean up auto-generated testing files? (Y/n)')
+
+    if not ('n' in x.lower()):
+        files = glob.glob('*_appendingfile_*')
+        files += glob.glob('*_testingFile_*')
+        files += glob.glob('metadata_test_file.meta')
+        files += glob.glob('metadata_test_file_meta.json')
+        for p in files:
+            print('    removing', p)
+            os.remove(p)
+    else:
+        print('testing files saved.')
+
