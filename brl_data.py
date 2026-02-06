@@ -159,20 +159,25 @@ class finder:
         self.dirs = dlist
 
     def get_search_dirs(self):
-        tmp = datafile()  # basically just to read the config file for the dirs
-        dirs = [tmp.folder] + tmp.search_folders
-        print('debug: search folders set to: ', dirs)
+        tmp = datafile('dummy', 'dummy', 'dummy')  # basically just to read the config file for the dirs
+        dirs = set([tmp.data_folder] + tmp.search_folders)
+        # print('debug: search folders set to: ', dirs)
         self.set_dirs(dirs)
 
     def findh(self,keys):
+        if type(keys) != type(['xyz256']):
+            keys = [keys]
         if self.dirs is None:
             brl_error('finder: You must specify some dirs/folders with .set_dirs(ds) first.')
         self.keys = keys
         # keys: a list of strings which must be contained in filename
         if len(self.dirs) < 1:
             brl_error(' file finder needs at least one directory/folder')
+        if len(keys) < 1:
+            brl_error(' you must specify at least one search key for finder.findh')
         files = []
         for d in self.dirs:
+            # print('Looking at: ',d)
             fnames = os.listdir(d)
             for n in fnames:
                 files.append([d,str(n)]) # dir, name
@@ -184,6 +189,7 @@ class finder:
                     found = False
             if found:
                 matchlist.append(f)
+        print(f'finder.findh: heres what I found: {matchlist}')
 
         return matchlist  # list of [d,fname] pairs
 
@@ -429,6 +435,7 @@ class datafile:
         self.hashcode=brl_id(8)
         self.accessmode=None  # set by self.open()
         self.data_folder = ''  # can direct datafiles into a folder
+        self.search_folders = []  # other folders that finder class can search for data files
         self.git_repo_folder = ''   # place where current code lives
         self.output_class = None  # for example:  csv.writer()
         self.metadata = metadata()
@@ -450,7 +457,7 @@ class datafile:
             print('No brl_data_config file was found.')
             self.config_file_used = False
             print('brl_data.py: Got Here!',flush=True) ###################################################################
-            self.set_data_folder(str(Path.cwd()))  # '~'
+            self.set_data_folder(str(Path.cwd()))  # '.'
             self.set_git_folder(str(Path.cwd()))   # '.'
             print('    set folders to defaults:')
             print(f'        data: {self.data_folder}')
@@ -474,9 +481,9 @@ class datafile:
         fp = open(newestCF, 'r')
         for line in fp:
             wds = line.split()
-            print(f'TESTING: config line: {wds}')
+            # print(f'TESTING: config line: {wds}')
             if len(wds)<1:
-                next
+                break
             if len(wds)==1:
                 brl_error(f'unknown config input: {wds}',fatal=False)
 
