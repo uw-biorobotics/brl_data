@@ -29,20 +29,22 @@ fnames = []
 files = []
 
 mdflist = []
+dirs = set()
 for f in matchingFiles:
    if '_meta.json' in f[1] and targethash in f[1]:
       mdflist.append(f)
-
+      dirs.add(f[0])
 found = False
 if len(mdflist) > 1:
    mdflist = [mdflist[0]]    # de dup (copies in other dirs)
 for f in mdflist:
    if targethash in f[1]:
       found = True
-      filepath = f[0]+'/'+f[1]
+      filepath = (f[0]+'/'+f[1]).replace('//','/')
+      print('opening: ',filepath)
       subprocess.run( VIEWER +  [filepath] )
 
 if not found:
-   print('I found no metadata file with: ', targethash ,'in:')
+   print('I found no metadata file with: ', targethash)
    for d in dirs:
       print('     ',d)
