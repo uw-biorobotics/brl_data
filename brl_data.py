@@ -467,7 +467,7 @@ class datafile:
         #
         #  Find the latest fresh config file
         #  places to look for it.
-        dirs = [Path.home(), Path.cwd(), Path.cwd() / 'brl_data']
+        dirs = [Path.home(), Path.cwd(), Path.cwd() / 'brl_data', Path.cwd().parent]
         # check them:
         existing_files = []
         for dir in dirs:
